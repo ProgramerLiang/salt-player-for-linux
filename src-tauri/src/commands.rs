@@ -9,30 +9,25 @@ pub struct AppState {
     pub songs: Mutex<Vec<Song>>,
     pub queue: Mutex<PlayQueue>,
     pub config: Mutex<AppConfig>,
-    pub audio: Mutex<Option<AudioEngine>>,
+    pub audio: AudioEngine,
 }
 
 impl AppState {
     pub fn new() -> Self {
         let cfg = config::load_config();
-        let cached_songs = scanner::load_songs_cache();
+        let cached = scanner::load_songs_cache();
         Self {
-            songs: Mutex::new(cached_songs),
+            songs: Mutex::new(cached),
             queue: Mutex::new(PlayQueue::new()),
             config: Mutex::new(cfg),
-            audio: Mutex::new(AudioEngine::new().ok()),
+            audio: AudioEngine::new().expect("Failed to init audio engine"),
         }
     }
 }
 
-fn make_state(s: &PlaybackState) -> PlaybackState {
-    s.clone()
-}
-
-fn current_playback(audio: &Option<AudioEngine>, queue: &PlayQueue) -> PlaybackState {
+fn current_playback(audio: &AudioEngine, queue: &PlayQueue) -> PlaybackState {
+    let st = audio.get_state();
     if let Some(song) = queue.current() {
-        let is_playing = audio.as_ref().map(|a| a.is_playing()).unwrap_or(false);
-        let position = audio.as_ref().map(|a| a.position()).unwrap_or(0.0);
         PlaybackState {
             song_id: Some(song.id.clone()),
             title: song.title.clone(),
@@ -40,8 +35,8 @@ fn current_playback(audio: &Option<AudioEngine>, queue: &PlayQueue) -> PlaybackS
             album: song.album.clone(),
             cover_art: song.cover_art.clone(),
             duration: song.duration,
-            position,
-            is_playing,
+            position: st.position.min(song.duration),
+            is_playing: st.playing,
         }
     } else {
         PlaybackState {
@@ -55,6 +50,19 @@ fn current_playback(audio: &Option<AudioEngine>, queue: &PlayQueue) -> PlaybackS
             is_playing: false,
         }
     }
+}
+
+fn play_song_internal(audio: &AudioEngine, queue: &mut PlayQueue, songs: &[Song], song_id: &str) -> Result<PlaybackState, String> {
+    let song = songs
+        .iter()
+        .find(|s| s.id == *song_id)
+        .cloned()
+        .ok_or_else(|| "歌曲未找到".to_string())?;
+    let pos = songs.iter().position(|s| s.id == *song_id).unwrap_or(0);
+    queue.set_queue(songs.to_vec(), pos);
+    let _ = audio.load_file(&song.file_path)?;
+    audio.play();
+    Ok(current_playback(audio, queue))
 }
 
 #[tauri::command]
@@ -79,118 +87,56 @@ pub fn get_songs(state: tauri::State<AppState>) -> Result<Vec<Song>, String> {
 #[tauri::command]
 pub fn play_song(state: tauri::State<AppState>, song_id: String) -> Result<PlaybackState, String> {
     let songs = state.songs.lock().map_err(|e| e.to_string())?;
-    let song = songs
-        .iter()
-        .find(|s| s.id == song_id)
-        .cloned()
-        .ok_or_else(|| "歌曲未找到".to_string())?;
-    let pos = songs.iter().position(|s| s.id == song_id).unwrap_or(0);
-    drop(songs);
-
-    if let Ok(mut q) = state.queue.lock() {
-        let songs_lock = state.songs.lock().map_err(|e| e.to_string())?;
-        q.set_queue(songs_lock.clone(), pos);
-    }
-
-    if let Ok(mut audio) = state.audio.lock() {
-        if let Some(ref mut eng) = *audio {
-            eng.load_file(&song.file_path).map_err(|e| e.to_string())?;
-            eng.play();
-        }
-    }
-
-    let q = state.queue.lock().map_err(|e| e.to_string())?;
-    let audio = state.audio.lock().map_err(|e| e.to_string())?;
-    Ok(current_playback(&audio, &q))
+    let mut queue = state.queue.lock().map_err(|e| e.to_string())?;
+    play_song_internal(&state.audio, &mut queue, &songs, &song_id)
 }
 
 #[tauri::command]
 pub fn pause(state: tauri::State<AppState>) -> Result<PlaybackState, String> {
-    if let Ok(mut audio) = state.audio.lock() {
-        if let Some(ref mut eng) = *audio {
-            eng.pause();
-        }
-    }
+    state.audio.pause();
     let q = state.queue.lock().map_err(|e| e.to_string())?;
-    let audio = state.audio.lock().map_err(|e| e.to_string())?;
-    Ok(current_playback(&audio, &q))
+    Ok(current_playback(&state.audio, &q))
 }
 
 #[tauri::command]
 pub fn resume(state: tauri::State<AppState>) -> Result<PlaybackState, String> {
-    if let Ok(mut audio) = state.audio.lock() {
-        if let Some(ref mut eng) = *audio {
-            eng.play();
-        }
-    }
+    state.audio.play();
     let q = state.queue.lock().map_err(|e| e.to_string())?;
-    let audio = state.audio.lock().map_err(|e| e.to_string())?;
-    Ok(current_playback(&audio, &q))
+    Ok(current_playback(&state.audio, &q))
 }
 
 #[tauri::command]
 pub fn next_song(state: tauri::State<AppState>) -> Result<PlaybackState, String> {
-    if let Ok(mut q) = state.queue.lock() {
-        q.next();
+    let mut queue = state.queue.lock().map_err(|e| e.to_string())?;
+    queue.next();
+    if let Some(song) = queue.current() {
+        let _ = state.audio.load_file(&song.file_path);
+        state.audio.play();
     }
-    if let Ok(mut audio) = state.audio.lock() {
-        if let Some(ref mut eng) = *audio {
-            eng.stop();
-        }
-    }
-    let q = state.queue.lock().map_err(|e| e.to_string())?;
-    if let Some(song) = q.current() {
-        if let Ok(mut audio) = state.audio.lock() {
-            if let Some(ref mut eng) = *audio {
-                let _ = eng.load_file(&song.file_path);
-                eng.play();
-            }
-        }
-    }
-    let audio = state.audio.lock().map_err(|e| e.to_string())?;
-    let q = state.queue.lock().map_err(|e| e.to_string())?;
-    Ok(current_playback(&audio, &q))
+    Ok(current_playback(&state.audio, &queue))
 }
 
 #[tauri::command]
 pub fn prev_song(state: tauri::State<AppState>) -> Result<PlaybackState, String> {
-    if let Ok(mut q) = state.queue.lock() {
-        q.prev();
+    let mut queue = state.queue.lock().map_err(|e| e.to_string())?;
+    queue.prev();
+    if let Some(song) = queue.current() {
+        let _ = state.audio.load_file(&song.file_path);
+        state.audio.play();
     }
-    if let Ok(mut audio) = state.audio.lock() {
-        if let Some(ref mut eng) = *audio {
-            eng.stop();
-        }
-    }
-    let q = state.queue.lock().map_err(|e| e.to_string())?;
-    if let Some(song) = q.current() {
-        if let Ok(mut audio) = state.audio.lock() {
-            if let Some(ref mut eng) = *audio {
-                let _ = eng.load_file(&song.file_path);
-                eng.play();
-            }
-        }
-    }
-    let audio = state.audio.lock().map_err(|e| e.to_string())?;
-    let q = state.queue.lock().map_err(|e| e.to_string())?;
-    Ok(current_playback(&audio, &q))
+    Ok(current_playback(&state.audio, &queue))
 }
 
 #[tauri::command]
 pub fn get_playback_state(state: tauri::State<AppState>) -> Result<PlaybackState, String> {
     let q = state.queue.lock().map_err(|e| e.to_string())?;
-    let audio = state.audio.lock().map_err(|e| e.to_string())?;
-    Ok(current_playback(&audio, &q))
+    Ok(current_playback(&state.audio, &q))
 }
 
 #[tauri::command]
 pub fn set_play_mode(state: tauri::State<AppState>, mode: String) -> Result<(), String> {
     let pm = PlayMode::from_str(&mode).ok_or_else(|| format!("无效模式: {}", mode))?;
-    state
-        .queue
-        .lock()
-        .map(|mut q| q.set_mode(pm))
-        .map_err(|e| e.to_string())
+    state.queue.lock().map(|mut q| q.set_mode(pm)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -215,11 +161,7 @@ pub fn clear_library(state: tauri::State<AppState>) -> Result<(), String> {
     if let Ok(mut q) = state.queue.lock() {
         q.set_queue(vec![], 0);
     }
-    if let Ok(mut audio) = state.audio.lock() {
-        if let Some(ref mut eng) = *audio {
-            eng.stop();
-        }
-    }
+    state.audio.stop();
     let cache = crate::config::config_dir().join("cache").join("songs.json");
     let _ = std::fs::remove_file(cache);
     Ok(())
