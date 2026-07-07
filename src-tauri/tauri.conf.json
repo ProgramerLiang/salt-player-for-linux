@@ -27,7 +27,7 @@
   "bundle": {
     "active": true,
     "targets": ["deb", "appimage"],
-    "category": "Audio",
+    "icon": ["icons/icon.png"],
     "shortDescription": "Salt Player for Linux",
     "longDescription": "A local music player for Ubuntu 24.04."
   }
