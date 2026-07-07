@@ -6,6 +6,8 @@
 
 Salt Player for Linux 是 Salt Player（椒盐音乐）的 Linux 桌面移植版，一款本地音乐播放软件。参考 [SaltPlayerSource](https://github.com/Moriafly/SaltPlayerSource) 的品牌定位与功能方向，使用 Tauri v2 + Rust + React 构建，首发 Ubuntu 24.04 支持。
 
+上游仓库采用 MIT License，本项目同样以 MIT License 发布，并保留原始版权声明。
+
 ## 2. 技术栈
 
 | 层 | 技术 | 说明 |
@@ -129,7 +131,17 @@ GitHub Actions 触发条件: 推送 v* 标签
   └── 上传 .deb + AppImage
 ```
 
-## 9. 首个版本范围 (v0.1.0-alpha)
+## 9. 许可
+
+本项目基于上游 [SaltPlayerSource](https://github.com/Moriafly/SaltPlayerSource) 的 MIT License，保留原始版权声明：
+
+```
+Copyright (c) 2021-2026 Moriafly
+```
+
+本项目新增代码同样以 MIT License 发布。
+
+## 10. 首个版本范围 (v0.1.0-alpha)
 
 - 本地音乐目录扫描（FLAC / MP3 / AAC / OGG / WAV）
 - 播放控制：播放/暂停/上一首/下一首/进度拖动
