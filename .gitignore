@@ -1,5 +1,25 @@
-.ant-colony/
-node_modules/
-dist/
-src-tauri/target/
+# Salt Player for Linux
+# Build with Gradle + Kotlin + Compose Multiplatform + SaltUI
+
+# IDE
+.idea/
+*.iml
+.gradle/
+
+# Build
+app/build/
+build/
+out/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Package
+*.deb
+*.AppImage
+*.tar.gz
+
+# Local config
+local.properties
+.ant-colony/
