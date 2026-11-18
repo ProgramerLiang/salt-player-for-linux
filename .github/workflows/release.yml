@@ -19,9 +19,9 @@ jobs:
       - name: Install packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot rpm
+          sudo apt-get install -y fakeroot rpm zstd libarchive-tools
       - name: Build all packages
-        run: ./gradlew :app:packageDeb :app:packageRpm :app:packageAppImage :app:packageTarGz --no-daemon
+        run: ./gradlew :app:packageDeb :app:packageRpm :app:packageAppImage :app:packageTarGz :app:packageArch --no-daemon
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -30,3 +30,4 @@ jobs:
             app/build/compose/binaries/main/rpm/*.rpm
             app/build/compose/binaries/main/appimage/*.AppImage
             app/build/compose/binaries/main/tar.gz/*.tar.gz
+            app/build/compose/binaries/main/arch/*.pkg.tar.zst

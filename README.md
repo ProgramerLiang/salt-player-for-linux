@@ -8,7 +8,7 @@
 |:--|:--|
 | 编译 | `./gradlew :app:compileKotlin` 通过 |
 | 测试 | `./gradlew :app:test` 66/66 通过 |
-| 包 | `packageDebFallback`（159 MB `.deb`）、`packageTarGz`（160 MB `.tar.gz`）真实产出 |
+| 包 | `packageDebFallback`（159 MB `.deb`）、`packageTarGz`（160 MB `.tar.gz`）、`packageArch`（142 MB `.pkg.tar.zst`）真实产出 |
 | 音频后端 | GStreamer（主）→ libmpv → Java Sound，设置页展示探测结果与安装命令 |
 | MPRIS | 名称注册、PlayPause/Next 等方法调用实测通过；Properties Get 待修（见报告） |
 
@@ -30,6 +30,7 @@
 ./gradlew :app:createDistributable              # app-image
 ./gradlew :app:packageDebFallback               # 不依赖 dpkg-deb 的 .deb
 ./gradlew :app:packageTarGz                     # 便携 tar.gz
+./gradlew :app:packageArch                      # Arch .pkg.tar.zst
 ```
 
 CI（Ubuntu 24.04）会尝试标准 `packageDeb`/`packageRpm`/`packageAppImage` 并上传全部 artifact。

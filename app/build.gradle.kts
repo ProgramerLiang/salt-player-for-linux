@@ -139,3 +139,23 @@ val packageDebFallback by tasks.registering(Exec::class) {
         project.version.toString(),
     )
 }
+
+
+/** Arch Linux .pkg.tar.zst built from the Compose app image (no root required). */
+val packageArch by tasks.registering(Exec::class) {
+    group = "compose desktop"
+    description = "Builds a standard Arch .pkg.tar.zst from the app image"
+    dependsOn("createDistributable")
+    val imageDir = layout.buildDirectory.dir("compose/binaries/main/app/salt-player")
+    val outputFile = layout.buildDirectory.file("compose/binaries/main/arch/salt-player-${project.version}-1-x86_64.pkg.tar.zst")
+    inputs.dir(imageDir)
+    inputs.file(rootProject.file("icons/icon.png"))
+    outputs.file(outputFile)
+    commandLine(
+        rootProject.file("scripts/build-arch.sh").absolutePath,
+        imageDir.get().asFile.absolutePath,
+        outputFile.get().asFile.absolutePath,
+        project.version.toString(),
+        rootProject.projectDir.absolutePath,
+    )
+}
