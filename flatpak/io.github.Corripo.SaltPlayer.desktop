@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Salt Player
+GenericName=Music Player
+Comment=Salt Player (椒盐音乐) for Linux
+Exec=salt-player %F
+Icon=io.github.Corripo.SaltPlayer
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;
+StartupNotify=true

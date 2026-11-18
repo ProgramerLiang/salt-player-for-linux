@@ -1,0 +1,192 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// Copyright (C) 2026 Corripo
+package com.saltplayer.ui.i18n
+
+import com.saltplayer.data.prefs.AppLanguage
+import java.util.Locale
+
+/** Every user-visible string. Keeping them in one enum makes missing translations obvious. */
+enum class Str {
+    AppName,
+    Songs, Albums, Artists, Folders, Playlists, Recent, Favorites, Settings,
+    Search, SearchHint, SearchEmpty, SearchIn, NoResults,
+    Play, Pause, Next, Previous, Shuffle, Repeat, RepeatOne, Sequential, RepeatAll, ShuffleNoRepeat,
+    PlayMode, Queue, NowPlaying, AddToQueue, PlayNext, AddToPlaylist, RemoveFromQueue, ClearQueue,
+    MoveUp, MoveDown, Close, Back, More, Confirm, Cancel, Save, Delete, Rename, Create, Ok,
+    Scan, Scanning, ScanAll, RescanLibrary, ScanProgress, ScanCancel, ScanDone, ScanCancelled,
+    ScanSummary, MusicFolders, AddFolder, RemoveFolder, FolderHint,
+    EmptyLibrary, EmptyLibraryHint, EmptyPlaylist, EmptyFavorites, EmptyRecent, EmptyFolders,
+    UnknownArtist, UnknownAlbum, TrackCount, AlbumCount, SongCount, DiscNumber,
+    Volume, PlaybackRate, PlaybackSpeed, Equalizer, EqualizerEnabled, Preset, Preamp,
+    ReplayGain, ReplayGainOff, ReplayGainTrack, ReplayGainAlbum,
+    Audio, AudioBackend, Backend, OutputDevice, SystemDefault, Capabilities, BackendUnavailable,
+    InstallHint, RescanBackends, BackendAuto, BackendPinned,
+    Appearance, Theme, ThemeSystem, ThemeLight, ThemeDark, AccentColor, UseSystemAccent,
+    FontScale, Language, LanguageSystem, LanguageChinese, LanguageEnglish,
+    Behaviour, CloseBehaviour, CloseQuit, CloseMinimize, ShowTray, SleepTimer, SleepTimerOff,
+    SleepTimerMinutes, SleepTimerSet, ScanOnStartup, FollowSymlinks,
+    Library, Lyrics, NoLyrics, LyricsOffset, LyricsShiftEarlier, LyricsShiftLater, LyricsReset,
+    LyricsSource, LyricsEmbedded, LyricsSidecar, Translations, DesktopIntegration, MprisEnabled,
+    MprisName, About, Version, License, Homepage, ThirdParty, SingleInstance,
+    AddedToQueue, AddedToPlaylist, RemovedFromPlaylist, CreatedPlaylist, PlaylistName, DeletePlaylistConfirm,
+    TrackInfo, Path, Format, Bitrate, SampleRate, Channels, Duration, Year, Genre, Favorite,
+    AddFavorite, RemoveFavorite, PlayAll, ShuffleAll, OpenFolder, CopyPath,
+    Exit, Minimize, ShowWindow, ErrorNoBackend, ErrorScanFailed, ErrorPlayback, Loading,
+    MinuteShort, HourShort, JustNow, Yesterday, DaysAgo,
+}
+
+/**
+ * Localised strings. Chinese and English share one table so a missing key is a compile-time
+ * error rather than a runtime surprise.
+ */
+class Strings(language: AppLanguage = AppLanguage.System) {
+
+    val language: AppLanguage = when (language) {
+        AppLanguage.System -> if (Locale.getDefault().language.startsWith("zh")) {
+            AppLanguage.Chinese
+        } else {
+            AppLanguage.English
+        }
+
+        else -> language
+    }
+
+    operator fun get(key: Str): String = when (language) {
+        AppLanguage.Chinese -> chinese[key] ?: key.name
+        else -> english[key] ?: key.name
+    }
+
+    fun format(key: Str, vararg args: Any): String = get(key).format(*args)
+
+    private companion object {
+        val chinese: Map<Str, String> = mapOf(
+            Str.AppName to "椒盐音乐",
+            Str.Songs to "歌曲", Str.Albums to "专辑", Str.Artists to "艺术家", Str.Folders to "文件夹",
+            Str.Playlists to "播放列表", Str.Recent to "最近播放", Str.Favorites to "我的收藏",
+            Str.Settings to "设置", Str.Search to "搜索", Str.SearchHint to "搜索歌曲、专辑、艺术家",
+            Str.SearchEmpty to "输入关键词开始搜索", Str.SearchIn to "搜索范围", Str.NoResults to "没有找到结果",
+            Str.Play to "播放", Str.Pause to "暂停", Str.Next to "下一首", Str.Previous to "上一首",
+            Str.Shuffle to "随机播放", Str.Repeat to "循环", Str.RepeatOne to "单曲循环",
+            Str.Sequential to "顺序播放", Str.RepeatAll to "列表循环", Str.ShuffleNoRepeat to "伪随机（不重复）",
+            Str.PlayMode to "播放模式", Str.Queue to "播放队列", Str.NowPlaying to "正在播放",
+            Str.AddToQueue to "添加到队列", Str.PlayNext to "下一首播放", Str.AddToPlaylist to "添加到播放列表",
+            Str.RemoveFromQueue to "从队列移除", Str.ClearQueue to "清空队列", Str.MoveUp to "上移", Str.MoveDown to "下移",
+            Str.Close to "关闭", Str.Back to "返回", Str.More to "更多", Str.Confirm to "确定", Str.Cancel to "取消",
+            Str.Save to "保存", Str.Delete to "删除", Str.Rename to "重命名", Str.Create to "创建", Str.Ok to "好",
+            Str.Scan to "扫描", Str.Scanning to "正在扫描…", Str.ScanAll to "全量重扫", Str.RescanLibrary to "重新扫描媒体库",
+            Str.ScanProgress to "扫描进度", Str.ScanCancel to "取消扫描", Str.ScanDone to "扫描完成",
+            Str.ScanCancelled to "扫描已取消", Str.ScanSummary to "新增 %d · 更新 %d · 移除 %d · 共 %d 首",
+            Str.MusicFolders to "音乐文件夹", Str.AddFolder to "添加文件夹", Str.RemoveFolder to "移除文件夹",
+            Str.FolderHint to "添加后会自动递归扫描其中的音频文件",
+            Str.EmptyLibrary to "媒体库还是空的", Str.EmptyLibraryHint to "在设置里添加音乐文件夹，然后开始扫描",
+            Str.EmptyPlaylist to "播放列表还是空的", Str.EmptyFavorites to "还没有收藏的歌曲",
+            Str.EmptyRecent to "还没有播放记录", Str.EmptyFolders to "没有找到音频文件",
+            Str.UnknownArtist to "未知艺术家", Str.UnknownAlbum to "未知专辑",
+            Str.TrackCount to "%d 首", Str.AlbumCount to "%d 张专辑", Str.SongCount to "共 %d 首",
+            Str.DiscNumber to "第 %d 张碟",
+            Str.Volume to "音量", Str.PlaybackRate to "播放速度", Str.PlaybackSpeed to "播放速度：%.2fx",
+            Str.Equalizer to "均衡器", Str.EqualizerEnabled to "启用均衡器", Str.Preset to "预设", Str.Preamp to "前置放大",
+            Str.ReplayGain to "音量归一", Str.ReplayGainOff to "关闭", Str.ReplayGainTrack to "按曲目",
+            Str.ReplayGainAlbum to "按专辑",
+            Str.Audio to "音频", Str.AudioBackend to "音频后端", Str.Backend to "后端", Str.OutputDevice to "输出设备",
+            Str.SystemDefault to "系统默认", Str.Capabilities to "支持的特性",
+            Str.BackendUnavailable to "不可用", Str.InstallHint to "安装命令", Str.RescanBackends to "重新检测后端",
+            Str.BackendAuto to "自动选择", Str.BackendPinned to "已指定",
+            Str.Appearance to "外观", Str.Theme to "主题", Str.ThemeSystem to "跟随系统", Str.ThemeLight to "浅色",
+            Str.ThemeDark to "深色", Str.AccentColor to "主题色", Str.UseSystemAccent to "跟随系统主题色",
+            Str.FontScale to "字体缩放", Str.Language to "语言", Str.LanguageSystem to "跟随系统",
+            Str.LanguageChinese to "简体中文", Str.LanguageEnglish to "English",
+            Str.Behaviour to "行为", Str.CloseBehaviour to "关闭窗口时", Str.CloseQuit to "退出程序",
+            Str.CloseMinimize to "最小化到托盘", Str.ShowTray to "显示托盘图标", Str.SleepTimer to "睡眠定时器",
+            Str.SleepTimerOff to "关闭", Str.SleepTimerMinutes to "%d 分钟后停止播放", Str.SleepTimerSet to "定时器将在 %s 后暂停播放",
+            Str.ScanOnStartup to "启动时自动扫描", Str.FollowSymlinks to "跟随符号链接",
+            Str.Library to "媒体库", Str.Lyrics to "歌词", Str.NoLyrics to "暂无歌词",
+            Str.LyricsOffset to "歌词校准", Str.LyricsShiftEarlier to "提前 0.5s", Str.LyricsShiftLater to "延后 0.5s",
+            Str.LyricsReset to "重置校准", Str.LyricsSource to "歌词来源", Str.LyricsEmbedded to "内嵌歌词",
+            Str.LyricsSidecar to "同目录 .lrc", Str.Translations to "双语歌词", Str.DesktopIntegration to "桌面集成",
+            Str.MprisEnabled to "MPRIS 媒体控制", Str.MprisName to "D-Bus 名称", Str.About to "关于",
+            Str.Version to "版本", Str.License to "许可证", Str.Homepage to "项目主页", Str.ThirdParty to "第三方组件",
+            Str.SingleInstance to "单实例运行",
+            Str.AddedToQueue to "已添加到队列", Str.AddedToPlaylist to "已添加到播放列表",
+            Str.RemovedFromPlaylist to "已从播放列表移除", Str.CreatedPlaylist to "已创建播放列表 %s",
+            Str.PlaylistName to "播放列表名称", Str.DeletePlaylistConfirm to "确定删除播放列表「%s」吗？",
+            Str.TrackInfo to "歌曲信息", Str.Path to "路径", Str.Format to "格式", Str.Bitrate to "比特率",
+            Str.SampleRate to "采样率", Str.Channels to "声道", Str.Duration to "时长", Str.Year to "年份",
+            Str.Genre to "流派", Str.Favorite to "收藏", Str.AddFavorite to "收藏", Str.RemoveFavorite to "取消收藏",
+            Str.PlayAll to "全部播放", Str.ShuffleAll to "随机播放全部", Str.OpenFolder to "打开所在文件夹",
+            Str.CopyPath to "复制路径", Str.Exit to "退出", Str.Minimize to "最小化", Str.ShowWindow to "显示窗口",
+            Str.ErrorNoBackend to "没有可用的音频后端，请安装 GStreamer 或 libmpv",
+            Str.ErrorScanFailed to "扫描失败", Str.ErrorPlayback to "播放失败", Str.Loading to "加载中…",
+            Str.MinuteShort to "%d 分钟", Str.HourShort to "%d 小时", Str.JustNow to "刚刚",
+            Str.Yesterday to "昨天", Str.DaysAgo to "%d 天前",
+        )
+
+        val english: Map<Str, String> = mapOf(
+            Str.AppName to "Salt Player",
+            Str.Songs to "Songs", Str.Albums to "Albums", Str.Artists to "Artists", Str.Folders to "Folders",
+            Str.Playlists to "Playlists", Str.Recent to "Recently played", Str.Favorites to "Favorites",
+            Str.Settings to "Settings", Str.Search to "Search", Str.SearchHint to "Search songs, albums, artists",
+            Str.SearchEmpty to "Type to search", Str.SearchIn to "Search in", Str.NoResults to "No results",
+            Str.Play to "Play", Str.Pause to "Pause", Str.Next to "Next", Str.Previous to "Previous",
+            Str.Shuffle to "Shuffle", Str.Repeat to "Repeat", Str.RepeatOne to "Repeat one",
+            Str.Sequential to "Sequential", Str.RepeatAll to "Repeat all", Str.ShuffleNoRepeat to "Shuffle (no repeat)",
+            Str.PlayMode to "Play mode", Str.Queue to "Queue", Str.NowPlaying to "Now playing",
+            Str.AddToQueue to "Add to queue", Str.PlayNext to "Play next", Str.AddToPlaylist to "Add to playlist",
+            Str.RemoveFromQueue to "Remove from queue", Str.ClearQueue to "Clear queue", Str.MoveUp to "Move up",
+            Str.MoveDown to "Move down", Str.Close to "Close", Str.Back to "Back", Str.More to "More",
+            Str.Confirm to "Confirm", Str.Cancel to "Cancel", Str.Save to "Save", Str.Delete to "Delete",
+            Str.Rename to "Rename", Str.Create to "Create", Str.Ok to "OK",
+            Str.Scan to "Scan", Str.Scanning to "Scanning…", Str.ScanAll to "Full rescan",
+            Str.RescanLibrary to "Rescan library", Str.ScanProgress to "Scan progress", Str.ScanCancel to "Cancel scan",
+            Str.ScanDone to "Scan finished", Str.ScanCancelled to "Scan cancelled",
+            Str.ScanSummary to "%d added · %d updated · %d removed · %d tracks",
+            Str.MusicFolders to "Music folders", Str.AddFolder to "Add folder", Str.RemoveFolder to "Remove folder",
+            Str.FolderHint to "Folders are scanned recursively for audio files",
+            Str.EmptyLibrary to "Your library is empty", Str.EmptyLibraryHint to "Add a music folder in Settings, then scan",
+            Str.EmptyPlaylist to "This playlist is empty", Str.EmptyFavorites to "No favourite tracks yet",
+            Str.EmptyRecent to "Nothing played yet", Str.EmptyFolders to "No audio files found",
+            Str.UnknownArtist to "Unknown artist", Str.UnknownAlbum to "Unknown album",
+            Str.TrackCount to "%d tracks", Str.AlbumCount to "%d albums", Str.SongCount to "%d songs",
+            Str.DiscNumber to "Disc %d",
+            Str.Volume to "Volume", Str.PlaybackRate to "Playback rate", Str.PlaybackSpeed to "Speed: %.2fx",
+            Str.Equalizer to "Equalizer", Str.EqualizerEnabled to "Enable equalizer", Str.Preset to "Preset",
+            Str.Preamp to "Preamp", Str.ReplayGain to "ReplayGain", Str.ReplayGainOff to "Off",
+            Str.ReplayGainTrack to "Per track", Str.ReplayGainAlbum to "Per album",
+            Str.Audio to "Audio", Str.AudioBackend to "Audio backend", Str.Backend to "Backend",
+            Str.OutputDevice to "Output device", Str.SystemDefault to "System default",
+            Str.Capabilities to "Capabilities", Str.BackendUnavailable to "unavailable",
+            Str.InstallHint to "Install command", Str.RescanBackends to "Re-probe backends",
+            Str.BackendAuto to "Automatic", Str.BackendPinned to "Pinned",
+            Str.Appearance to "Appearance", Str.Theme to "Theme", Str.ThemeSystem to "System",
+            Str.ThemeLight to "Light", Str.ThemeDark to "Dark", Str.AccentColor to "Accent colour",
+            Str.UseSystemAccent to "Follow system accent", Str.FontScale to "Font scale", Str.Language to "Language",
+            Str.LanguageSystem to "System", Str.LanguageChinese to "简体中文", Str.LanguageEnglish to "English",
+            Str.Behaviour to "Behaviour", Str.CloseBehaviour to "When closing the window", Str.CloseQuit to "Quit",
+            Str.CloseMinimize to "Minimise to tray", Str.ShowTray to "Show tray icon", Str.SleepTimer to "Sleep timer",
+            Str.SleepTimerOff to "Off", Str.SleepTimerMinutes to "Stop after %d minutes",
+            Str.SleepTimerSet to "Playback will pause in %s",
+            Str.ScanOnStartup to "Scan on start-up", Str.FollowSymlinks to "Follow symbolic links",
+            Str.Library to "Library", Str.Lyrics to "Lyrics", Str.NoLyrics to "No lyrics",
+            Str.LyricsOffset to "Lyric offset", Str.LyricsShiftEarlier to "0.5s earlier",
+            Str.LyricsShiftLater to "0.5s later", Str.LyricsReset to "Reset offset", Str.LyricsSource to "Lyric source",
+            Str.LyricsEmbedded to "Embedded", Str.LyricsSidecar to "Sidecar .lrc", Str.Translations to "Translations",
+            Str.DesktopIntegration to "Desktop integration", Str.MprisEnabled to "MPRIS media controls",
+            Str.MprisName to "D-Bus name", Str.About to "About", Str.Version to "Version",
+            Str.License to "License", Str.Homepage to "Homepage", Str.ThirdParty to "Third-party components",
+            Str.SingleInstance to "Single instance",
+            Str.AddedToQueue to "Added to queue", Str.AddedToPlaylist to "Added to playlist",
+            Str.RemovedFromPlaylist to "Removed from playlist", Str.CreatedPlaylist to "Created playlist %s",
+            Str.PlaylistName to "Playlist name", Str.DeletePlaylistConfirm to "Delete playlist \"%s\"?",
+            Str.TrackInfo to "Track info", Str.Path to "Path", Str.Format to "Format", Str.Bitrate to "Bitrate",
+            Str.SampleRate to "Sample rate", Str.Channels to "Channels", Str.Duration to "Duration",
+            Str.Year to "Year", Str.Genre to "Genre", Str.Favorite to "Favourite", Str.AddFavorite to "Add to favourites",
+            Str.RemoveFavorite to "Remove from favourites", Str.PlayAll to "Play all", Str.ShuffleAll to "Shuffle all",
+            Str.OpenFolder to "Open containing folder", Str.CopyPath to "Copy path", Str.Exit to "Quit",
+            Str.Minimize to "Minimise", Str.ShowWindow to "Show window",
+            Str.ErrorNoBackend to "No audio backend available — install GStreamer or libmpv",
+            Str.ErrorScanFailed to "Scan failed", Str.ErrorPlayback to "Playback failed", Str.Loading to "Loading…",
+            Str.MinuteShort to "%d min", Str.HourShort to "%d h", Str.JustNow to "just now",
+            Str.Yesterday to "yesterday", Str.DaysAgo to "%d days ago",
+        )
+    }
+}
