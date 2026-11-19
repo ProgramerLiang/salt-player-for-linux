@@ -83,19 +83,6 @@ builddir = /build
 startdir = /build
 BUILDINFO
 
-# .MTREE: minimal deterministic file list (one FILE entry per path).
-{
-  printf '#mtree\n'
-  printf '. type=dir mode=0755 uid=0 gid=0 time=0\n'
-  (cd "$PKG" && find . -mindepth 1 | LC_ALL=C sort | while read -r path; do
-    rel="${path#./}"
-    if [ -d "$PKG/$rel" ]; then
-      printf '%s type=dir mode=0755 uid=0 gid=0 time=0\n' "$rel"
-    else
-      printf '%s type=file mode=0644 uid=0 gid=0 time=0 size=%s\n' "$rel" "$(stat -c%s "$PKG/$rel")"
-    fi
-  done)
-} > "$PKG/.MTREE"
 
 mkdir -p "$(dirname "$OUTPUT")"
 rm -f "$OUTPUT" "$OUTPUT.tmp"
@@ -128,7 +115,6 @@ FIRST_ENTRY="$(head -n 1 "$TARBALL_LIST")"
 for required in \
   '.PKGINFO' \
   '.BUILDINFO' \
-  '.MTREE' \
   'usr/bin/salt-player' \
   'usr/share/applications/salt-player.desktop'; do
   grep -Fxq "$required" "$TARBALL_LIST" || {
@@ -141,5 +127,21 @@ if grep -Eq '^\./' "$TARBALL_LIST"; then
   grep -E '^\./' "$TARBALL_LIST" | head -5 >&2
   exit 1
 fi
+
+
+# Unpack the finished archive and verify that the payload files are regular,
+# non-empty files (this catches broken hardlink/metadata generation).
+EXTRACT_DIR="$WORK/extract"
+mkdir -p "$EXTRACT_DIR"
+tar --use-compress-program=zstd -xf "$OUTPUT" -C "$EXTRACT_DIR"
+for payload in \
+  'usr/bin/salt-player' \
+  'usr/share/applications/salt-player.desktop' \
+  'usr/share/salt-player/bin/salt-player'; do
+  target="$EXTRACT_DIR/$payload"
+  [ -f "$target" ] || { echo "unpacked payload is not a regular file: $payload" >&2; exit 1; }
+  [ -s "$target" ] || { echo "unpacked payload is empty: $payload" >&2; exit 1; }
+  echo "verified unpacked file: $payload ($(stat -c%s "$target") bytes)"
+done
 
 echo "wrote $OUTPUT ($(stat -c%s "$OUTPUT") bytes)"
