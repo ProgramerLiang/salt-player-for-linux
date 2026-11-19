@@ -47,9 +47,13 @@ import com.saltplayer.data.prefs.ReplayGainMode
 import com.saltplayer.data.prefs.Settings
 import com.saltplayer.data.prefs.ThemeMode
 import com.saltplayer.data.prefs.WindowMode
+import com.saltplayer.core.UiScale
 import com.saltplayer.platform.AppControl
 import com.saltplayer.platform.FolderPicker
+import com.saltplayer.platform.SystemTheme
 import com.saltplayer.ui.AppViewModel
+import com.saltplayer.ui.component.ContentColumn
+import com.saltplayer.ui.component.ContentMetrics
 import com.saltplayer.ui.component.SaltSlider
 import com.saltplayer.ui.component.SectionTitle
 import com.saltplayer.ui.component.Tag
@@ -63,15 +67,21 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
     var newFolder by remember { mutableStateOf("") }
     var deletePlaylistId by remember { mutableStateOf<Long?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    ContentColumn {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(ContentMetrics.SectionSpacing),
+        ) {
         SectionTitle(text = s[Str.Library])
-        RoundedColumn {
+        RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = ContentMetrics.CardHorizontalPadding,
+                vertical = ContentMetrics.CardVerticalPadding,
+            ),
+        ) {
             for (dir in vm.settings.musicDirs) {
                 Row(
                     modifier = Modifier.fillMaxWidth().height(40.dp),
@@ -130,7 +140,12 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
         }
 
         SectionTitle(text = s[Str.Audio])
-        RoundedColumn {
+        RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = ContentMetrics.CardHorizontalPadding,
+                vertical = ContentMetrics.CardVerticalPadding,
+            ),
+        ) {
             for (backend in vm.backends) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -206,7 +221,12 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
         EqualizerSection(vm)
 
         SectionTitle(text = s[Str.Appearance])
-        RoundedColumn {
+        RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = ContentMetrics.CardHorizontalPadding,
+                vertical = ContentMetrics.CardVerticalPadding,
+            ),
+        ) {
             PickerRow(
                 label = s[Str.Theme],
                 options = listOf(
@@ -247,6 +267,49 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
                     }
                 }
             }
+            // Interface scale: multiplies dp and sp, so everything grows together. Live preview
+            // comes for free because the value lives in the observed settings state.
+            val followSystem = vm.settings.uiScalePercent == UiScale.FOLLOW_SYSTEM
+            val systemScale = remember { SystemTheme.detectScale() }
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = s[Str.UiScale],
+                        color = SaltTheme.colors.text,
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Tag(
+                        text = s[Str.UiScaleFollowSystem],
+                        color = if (followSystem) SaltTheme.colors.highlight else SaltTheme.colors.subText,
+                        modifier = Modifier.clickable {
+                            vm.updateSettings { it.copy(uiScalePercent = UiScale.FOLLOW_SYSTEM) }
+                        },
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        val factor = UiScale.factor(vm.settings.uiScalePercent, systemScale)
+                        SaltSlider(
+                            value = ((factor * 100f) - UiScale.MIN_PERCENT) /
+                                (UiScale.MAX_PERCENT - UiScale.MIN_PERCENT),
+                            onValueChange = { fraction ->
+                                val percent = (UiScale.MIN_PERCENT +
+                                    fraction * (UiScale.MAX_PERCENT - UiScale.MIN_PERCENT)).toInt()
+                                vm.updateSettings { it.copy(uiScalePercent = UiScale.snapPercent(percent)) }
+                            },
+                        )
+                    }
+                    Text(
+                        text = if (followSystem) "跟随系统 ${(systemScale * 100).toInt()}%" else
+                            "${vm.settings.uiScalePercent}%",
+                        color = SaltTheme.colors.subText,
+                        fontSize = 11.sp,
+                        modifier = Modifier.width(96.dp),
+                    )
+                }
+                Text(text = s[Str.UiScaleNote], color = SaltTheme.colors.subText, fontSize = 11.sp)
+            }
             SliderRow(
                 label = s[Str.FontScale],
                 value = (vm.settings.fontScale - 0.8f) / 0.8f,
@@ -266,7 +329,12 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
         }
 
         SectionTitle(text = s[Str.Behaviour])
-        RoundedColumn {
+        RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = ContentMetrics.CardHorizontalPadding,
+                vertical = ContentMetrics.CardVerticalPadding,
+            ),
+        ) {
             PickerRow(
                 label = s[Str.WindowModeLabel],
                 options = listOf(
@@ -333,13 +401,23 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
         }
 
         SectionTitle(text = s[Str.DesktopIntegration])
-        RoundedColumn {
+        RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = ContentMetrics.CardHorizontalPadding,
+                vertical = ContentMetrics.CardVerticalPadding,
+            ),
+        ) {
             InfoLine(s[Str.MprisEnabled], if (BuildInfo.mprisActive) "org.mpris.MediaPlayer2.saltplayer" else s[Str.BackendUnavailable])
             InfoLine(s[Str.SingleInstance], BuildInfo.singleInstanceOwner)
         }
 
         SectionTitle(text = s[Str.About])
-        RoundedColumn {
+        RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = ContentMetrics.CardHorizontalPadding,
+                vertical = ContentMetrics.CardVerticalPadding,
+            ),
+        ) {
             InfoLine(s[Str.Version], BuildInfo.VERSION)
             InfoLine(s[Str.License], "LGPL-3.0-or-later")
             InfoLine(s[Str.AudioBackend], vm.playerState.backendName)
@@ -352,6 +430,7 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
             )
         }
         Spacer(Modifier.height(24.dp))
+        }
     }
 
     if (addFolderDialog) {
@@ -382,7 +461,12 @@ private fun EqualizerSection(vm: AppViewModel) {
     val s = vm.strings
     val eq = vm.settings.equalizer
     SectionTitle(text = s[Str.Equalizer])
-    RoundedColumn {
+    RoundedColumn(
+        paddingValues = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = ContentMetrics.CardHorizontalPadding,
+            vertical = ContentMetrics.CardVerticalPadding,
+        ),
+    ) {
         SwitchRow(
             label = s[Str.EqualizerEnabled],
             value = eq.enabled,

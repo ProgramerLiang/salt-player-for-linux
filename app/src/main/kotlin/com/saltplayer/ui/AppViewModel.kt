@@ -93,7 +93,12 @@ class AppViewModel(
     var folderTree by mutableStateOf<List<FolderNode>>(emptyList())
         private set
 
-    var screen by mutableStateOf<Screen>(Screen.Library(LibraryView.Songs))
+    var screen by mutableStateOf<Screen>(
+        // Debug/automation hook: screenshots and UI tests need to open a specific page
+        // without synthesising clicks, which are unreliable under some compositors.
+        if (System.getProperty("salt.player.startScreen") == "settings") Screen.Settings
+        else Screen.Library(LibraryView.Songs)
+    )
     var playerState by mutableStateOf(PlayerState())
         private set
     var scanState by mutableStateOf(ScanUiState())

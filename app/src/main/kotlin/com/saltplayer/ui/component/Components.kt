@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -362,5 +364,38 @@ fun Tag(text: String, modifier: Modifier = Modifier, color: Color = SaltTheme.co
             .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(text = text, color = color, fontSize = 11.sp)
+    }
+}
+
+/**
+ * Centred, width-capped container for long-form screens.
+ *
+ * Card-heavy content stretched across a 1920 px window reads as "no rhythm": the eye has to
+ * travel the full width for every row. Capping the column and centring it keeps a comfortable
+ * measure while still leaving the backdrop full-bleed.
+ */
+object ContentMetrics {
+    val MaxWidth = 820.dp
+    val SidePadding = 28.dp
+    val CardHorizontalPadding = 20.dp
+    val CardVerticalPadding = 6.dp
+    val SectionSpacing = 18.dp
+}
+
+@Composable
+fun ContentColumn(
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier = Modifier
+                // widthIn must run before fillMaxWidth: filling first pins the minimum width to
+                // the parent and the cap is then ignored.
+                .widthIn(max = ContentMetrics.MaxWidth)
+                .fillMaxWidth()
+                .padding(horizontal = ContentMetrics.SidePadding),
+            content = content,
+        )
     }
 }

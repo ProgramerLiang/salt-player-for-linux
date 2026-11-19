@@ -140,6 +140,8 @@ fun main() {
                 WindowMode.Windowed -> WindowPlacement.Floating
             },
         )
+        // Detected once: the compositor scale does not change while the app runs.
+        val systemScale = remember { com.saltplayer.platform.SystemTheme.detectScale() }
         var windowVisible by remember { mutableStateOf(true) }
         val trayState = rememberTrayState()
         val uiScope = rememberCoroutineScope()
@@ -183,8 +185,31 @@ fun main() {
                 systemDark = viewModel.systemDark,
                 systemAccentName = viewModel.systemAccentName,
             ) {
-                androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
-                    AppShell(viewModel)
+                // The toolkit reports density 1.0 on this session (verified: AWT defaultTransform
+                // is identity while the display scale is 1.25), so the scale is applied here.
+                // It multiplies dp and sp together, which is why controls, icons and spacing all
+                // grow with the slider instead of only the text.
+                val baseDensity = androidx.compose.ui.platform.LocalDensity.current
+                val resolved = com.saltplayer.core.UiScale.resolve(
+                    baseDensity = baseDensity.density,
+                    uiFactor = com.saltplayer.core.UiScale.factor(
+                        viewModel.settings.uiScalePercent,
+                        systemScale,
+                    ),
+                    fontScale = viewModel.settings.fontScale,
+                )
+                com.saltplayer.core.Log.info(
+                    "UiScale",
+                    "toolkit=${baseDensity.density} system=$systemScale percent=${viewModel.settings.uiScalePercent} " +
+                        "=> density=${resolved.density} fontScale=${resolved.fontScale}",
+                )
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalDensity provides
+                        androidx.compose.ui.unit.Density(resolved.density, resolved.fontScale),
+                ) {
+                    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+                        AppShell(viewModel)
+                    }
                 }
             }
         }

@@ -33,6 +33,7 @@ enum class Str {
     AddFavorite, RemoveFavorite, PlayAll, ShuffleAll, OpenFolder, CopyPath,
     WindowModeLabel, WindowModeFullscreen, WindowModeMaximized, WindowModeWindowed,
     RestartNow, WindowModeNeedsRestart, TrayUnavailable, TrayAvailable, NotPlaying,
+    UiScale, UiScaleFollowSystem, UiScaleNote, FontScaleLabel,
     Exit, Minimize, ShowWindow, ErrorNoBackend, ErrorScanFailed, ErrorPlayback, Loading,
     MinuteShort, HourShort, JustNow, Yesterday, DaysAgo,
 }
@@ -96,7 +97,9 @@ class Strings(language: AppLanguage = AppLanguage.System) {
             Str.BackendAuto to "自动选择", Str.BackendPinned to "已指定",
             Str.Appearance to "外观", Str.Theme to "主题", Str.ThemeSystem to "跟随系统", Str.ThemeLight to "浅色",
             Str.ThemeDark to "深色", Str.AccentColor to "主题色", Str.UseSystemAccent to "跟随系统主题色",
-            Str.FontScale to "字体缩放", Str.Language to "语言", Str.LanguageSystem to "跟随系统",
+            Str.FontScale to "字体缩放", Str.FontScaleLabel to "字体缩放",
+            Str.UiScale to "界面缩放", Str.UiScaleFollowSystem to "跟随系统",
+            Str.UiScaleNote to "界面缩放整体放大文字、控件与间距；字体缩放叠加其上，只影响文字。", Str.Language to "语言", Str.LanguageSystem to "跟随系统",
             Str.LanguageChinese to "简体中文", Str.LanguageEnglish to "English",
             Str.Behaviour to "行为", Str.CloseBehaviour to "关闭窗口时", Str.CloseQuit to "退出程序",
             Str.CloseMinimize to "最小化到托盘", Str.ShowTray to "显示托盘图标", Str.SleepTimer to "睡眠定时器",

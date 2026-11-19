@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -83,7 +84,11 @@ private fun SongsScreen(vm: AppViewModel) {
     }
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier = Modifier
+                .widthIn(max = com.saltplayer.ui.component.ContentMetrics.MaxWidth)
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally)
+                .padding(horizontal = com.saltplayer.ui.component.ContentMetrics.SidePadding, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -123,10 +128,14 @@ private fun SongsScreen(vm: AppViewModel) {
                 }
             }
         }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().widthIn(max = 1040.dp).align(Alignment.CenterHorizontally)
-                .padding(horizontal = 12.dp),
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = com.saltplayer.ui.component.ContentMetrics.MaxWidth)
+                    .fillMaxWidth()
+                    .padding(horizontal = com.saltplayer.ui.component.ContentMetrics.SidePadding),
+            ) {
             itemsIndexed(vm.tracks, key = { _, track -> track.id }) { index, track ->
                 TrackRow(
                     track = track,
@@ -138,7 +147,8 @@ private fun SongsScreen(vm: AppViewModel) {
                     onSecondary = { vm.trackInfoTrack = track },
                 )
             }
-            item { Spacer(Modifier.height(16.dp)) }
+                item { Spacer(Modifier.height(16.dp)) }
+            }
         }
     }
 }

@@ -3,6 +3,7 @@
 package com.saltplayer.platform
 
 import com.saltplayer.core.Log
+import com.saltplayer.core.UiScale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -27,6 +28,25 @@ object SystemTheme {
         gsettingsColorScheme()?.let { return it }
         val gtkTheme = System.getenv("GTK_THEME") ?: return false
         return gtkTheme.contains("dark", ignoreCase = true)
+    }
+
+    /**
+     * Display scale the toolkit failed to report.
+     *
+     * Under XWayland the compositor may resize the surface instead of advertising a scale, so
+     * `GraphicsConfiguration.getDefaultTransform()` stays identity. `Xft.dpi` is the next best
+     * source of truth, then GDK's environment variables, then AWT, then 1.0.
+     */
+    fun detectScale(): Float {
+        UiScale.parseXftDpi(runCommand(listOf("xrdb", "-query")))?.let { return it }
+        UiScale.parseEnvScale(System.getenv("GDK_SCALE"))?.let { return it }
+        runCatching {
+            val transform = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .defaultScreenDevice.defaultConfiguration.defaultTransform
+            val scale = transform.scaleX.toFloat()
+            if (scale > 1.01f) return scale
+        }
+        return 1f
     }
 
     fun accentName(): String? {

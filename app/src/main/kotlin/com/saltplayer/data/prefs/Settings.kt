@@ -78,7 +78,10 @@ data class Settings(
     /** Custom accent colour as ARGB; `null` means "use SaltUI's default highlight". */
     val accentColor: Long? = null,
     val useSystemAccent: Boolean = true,
+    /** Base text scale; stacks on top of [uiScalePercent]. */
     val fontScale: Float = 1f,
+    /** UI scale in percent; 0 means "follow the detected system scale". */
+    val uiScalePercent: Int = 0,
     val language: AppLanguage = AppLanguage.System,
     val musicDirs: List<String> = emptyList(),
     val backendPreference: BackendPreference = BackendPreference.Auto,
@@ -104,6 +107,7 @@ data class Settings(
     /** Defensive normalisation applied after load so a hand-edited file cannot break the UI. */
     fun sanitised(): Settings = copy(
         fontScale = fontScale.coerceIn(0.8f, 1.6f),
+        uiScalePercent = com.saltplayer.core.UiScale.snapPercent(uiScalePercent),
         volume = volume.coerceIn(0f, 1f),
         playbackSpeed = playbackSpeed.coerceIn(0.5f, 2f),
         musicDirs = musicDirs.map { it.trim() }.filter { it.isNotEmpty() }.distinct(),

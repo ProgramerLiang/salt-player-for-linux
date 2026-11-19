@@ -281,12 +281,18 @@ private fun TopBar(vm: AppViewModel, showMenuButton: Boolean, onMenuClick: () ->
         is Screen.AlbumDetail, is Screen.ArtistDetail, is Screen.PlaylistDetail, is Screen.FolderDetail -> ""
     }
 
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
-            .background(SaltTheme.colors.background)
-            .padding(horizontal = 16.dp),
+            .background(SaltTheme.colors.background),
+        contentAlignment = Alignment.Center,
+    ) {
+    Row(
+        modifier = Modifier
+            .widthIn(max = com.saltplayer.ui.component.ContentMetrics.MaxWidth)
+            .fillMaxWidth()
+            .padding(horizontal = com.saltplayer.ui.component.ContentMetrics.SidePadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -355,6 +361,7 @@ private fun TopBar(vm: AppViewModel, showMenuButton: Boolean, onMenuClick: () ->
                 vm.openScreen(Screen.Settings)
             }, size = 36.dp, tint = SaltTheme.colors.subText)
         }
+    }
     }
 }
 

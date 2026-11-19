@@ -74,7 +74,9 @@ fun AppTheme(
     SaltTheme(
         configs = SaltConfigs.default(isDarkTheme = dark),
         dynamicColors = colors,
-        textStyles = scaledTextStyles(settings.fontScale),
+        // Text scaling is handled by LocalDensity(fontScale); scaling the styles here as well
+        // would apply the factor twice.
+        textStyles = saltTextStyles(),
         content = content,
     )
 }
