@@ -100,29 +100,46 @@ BUILDINFO
 mkdir -p "$(dirname "$OUTPUT")"
 rm -f "$OUTPUT" "$OUTPUT.tmp"
 
-# Compress via a temporary tar file at a modest zstd level. This avoids a broken
-# pipe silently truncating the archive if an earlier stage exits, and guarantees
-# the completed archive is flushed before it is moved into place.
+# pacman requires metadata files at the archive root WITHOUT a leading "./".
+# Building the tar from an explicit sorted file list avoids GNU tar's synthetic "." entry.
 TAR_FILE="$WORK/salt-player.tar"
-tar --format=gnu --owner=0 --group=0 --numeric-owner -cf "$TAR_FILE" -C "$PKG" .
+(
+  cd "$PKG"
+  find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort > "$WORK/archive-files-sorted.txt"
+  {
+    echo '.PKGINFO'
+    grep -Fxv '.PKGINFO' "$WORK/archive-files-sorted.txt"
+  } > "$WORK/archive-files.txt"
+  tar --format=gnu --owner=0 --group=0 --numeric-owner -cf "$TAR_FILE" -T "$WORK/archive-files.txt"
+)
 zstd -3 -q -f -o "$OUTPUT.tmp" "$TAR_FILE"
 [ -s "$OUTPUT.tmp" ] || { echo "compression produced an empty archive" >&2; exit 1; }
 mv -f "$OUTPUT.tmp" "$OUTPUT"
 
-# Self-check: complete zstd stream plus the entries pacman/desktop integration need.
+# Strict self-check: exact root metadata names, no "./" entries at all.
 zstd -t "$OUTPUT"
 TARBALL_LIST="$WORK/archive-list.txt"
 tar --use-compress-program=zstd -tf "$OUTPUT" > "$TARBALL_LIST"
+FIRST_ENTRY="$(head -n 1 "$TARBALL_LIST")"
+[ "$FIRST_ENTRY" = ".PKGINFO" ] || {
+  echo "first archive entry must be .PKGINFO, got: $FIRST_ENTRY" >&2
+  exit 1
+}
 for required in \
-  ./.PKGINFO \
-  ./.BUILDINFO \
-  ./.MTREE \
-  ./usr/bin/salt-player \
-  ./usr/share/applications/salt-player.desktop; do
-  if ! grep -Fxq "$required" "$TARBALL_LIST"; then
+  '.PKGINFO' \
+  '.BUILDINFO' \
+  '.MTREE' \
+  'usr/bin/salt-player' \
+  'usr/share/applications/salt-player.desktop'; do
+  grep -Fxq "$required" "$TARBALL_LIST" || {
     echo "archive is missing required entry: $required" >&2
     exit 1
-  fi
+  }
 done
+if grep -Eq '^\./' "$TARBALL_LIST"; then
+  echo "archive contains invalid ./-prefixed entries" >&2
+  grep -E '^\./' "$TARBALL_LIST" | head -5 >&2
+  exit 1
+fi
 
 echo "wrote $OUTPUT ($(stat -c%s "$OUTPUT") bytes)"
