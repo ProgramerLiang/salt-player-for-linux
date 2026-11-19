@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -375,7 +376,32 @@ fun Tag(text: String, modifier: Modifier = Modifier, color: Color = SaltTheme.co
  * measure while still leaving the backdrop full-bleed.
  */
 object ContentMetrics {
+    /** Width cap for text-heavy columns that sit directly on the backdrop (song lists). */
     val MaxWidth = 820.dp
+
+    /** Width cap for the panel itself; the content fills the panel minus its inner padding. */
+    val PanelMaxWidth = 1400.dp
+    val PanelContentMaxWidth = 1040.dp
+
+    /** Distance between the panel edge and the window edge. */
+    val PanelOuterMargin = 24.dp
+    val PanelOuterMarginNarrow = 12.dp
+
+    /** Inner padding so text and controls never touch the panel border. */
+    /**
+     * Opaque panel colour.
+     *
+     * SaltUI's `subBackground` is a 50 % white wash (`0x80FFFFFF`). Painting a translucent panel
+     * on top of a translucent bed makes the panel slightly brighter than the margin around it,
+     * which reads as a colour band. Flattening the wash to an opaque colour lets the bed and the
+     * panels use the very same value.
+     */
+    @Composable
+    fun panelColor(): androidx.compose.ui.graphics.Color =
+        SaltTheme.colors.subBackground.compositeOver(SaltTheme.colors.background)
+
+    val PanelInnerHorizontal = 32.dp
+    val PanelInnerVertical = 20.dp
     val SidePadding = 28.dp
     val CardHorizontalPadding = 20.dp
     val CardVerticalPadding = 6.dp
@@ -397,5 +423,94 @@ fun ContentColumn(
                 .padding(horizontal = ContentMetrics.SidePadding),
             content = content,
         )
+    }
+}
+
+/**
+ * A white panel that is wider than the content it carries.
+ *
+ * SaltUI's [com.moriafly.salt.ui.RoundedColumn] applies `paddingValues` *before* clipping and
+ * painting, so padding there shrinks the visible surface instead of insetting its content. The
+ * panel therefore takes no padding of its own: the surface spans the available width minus
+ * [ContentMetrics.PanelOuterMargin], and an inner column adds the padding and the width cap.
+ */
+@Composable
+fun SettingsPanel(
+    outerMargin: Dp,
+    title: String? = null,
+    modifier: Modifier = Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    // The panel is the carrier: it spans the available width (capped for ultrawide windows) and
+    // only its *content* is inset, so text and controls never touch the paint edge.
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        modifier = Modifier
+            .widthIn(max = ContentMetrics.PanelMaxWidth)
+            .fillMaxWidth()
+            .padding(horizontal = outerMargin),
+    ) {
+        com.moriafly.salt.ui.RoundedColumn(
+            paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            color = ContentMetrics.panelColor(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = ContentMetrics.PanelInnerHorizontal,
+                        vertical = ContentMetrics.PanelInnerVertical,
+                    ),
+            ) {
+                if (title != null) {
+                    Text(
+                        text = title,
+                        color = SaltTheme.colors.text,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                content()
+            }
+        }
+    }
+    }
+}
+
+/**
+ * In-app logo: the same artwork as the launcher icon, loaded from resources.
+ *
+ * The sidebar used to render a `♫` glyph inside a coloured square, which looked like the old
+ * branding. The bitmap is packaged at 256 px so it stays sharp when the UI scale enlarges it.
+ */
+@Composable
+fun AppLogo(size: Dp, modifier: Modifier = Modifier, corner: Dp = 8.dp) {
+    val bitmap = remember {
+        runCatching {
+            val stream = Thread.currentThread().contextClassLoader
+                ?.getResourceAsStream("icons/salt-shaker.png")
+                ?: return@runCatching null
+            Image.makeFromEncoded(stream.use { it.readBytes() }).toComposeImageBitmap()
+        }.getOrNull()
+    }
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(corner))
+            .background(SaltTheme.colors.subBackground),
+        contentAlignment = Alignment.Center,
+    ) {
+        val image = bitmap
+        if (image != null) {
+            androidx.compose.foundation.Image(
+                bitmap = image,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(size),
+            )
+        } else {
+            Text(text = "♫", color = SaltTheme.colors.onHighlight, fontSize = 15.sp)
+        }
     }
 }

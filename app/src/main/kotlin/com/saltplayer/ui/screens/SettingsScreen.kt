@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,9 +53,9 @@ import com.saltplayer.platform.AppControl
 import com.saltplayer.platform.FolderPicker
 import com.saltplayer.platform.SystemTheme
 import com.saltplayer.ui.AppViewModel
-import com.saltplayer.ui.component.ContentColumn
 import com.saltplayer.ui.component.ContentMetrics
 import com.saltplayer.ui.component.SaltSlider
+import com.saltplayer.ui.component.SettingsPanel
 import com.saltplayer.ui.component.SectionTitle
 import com.saltplayer.ui.component.Tag
 import com.saltplayer.ui.i18n.Str
@@ -67,7 +68,9 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
     var newFolder by remember { mutableStateOf("") }
     var deletePlaylistId by remember { mutableStateOf<Long?>(null) }
 
-    ContentColumn {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val panelMargin = if (maxWidth < 720.dp) ContentMetrics.PanelOuterMarginNarrow
+        else ContentMetrics.PanelOuterMargin
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -75,13 +78,7 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
                 .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(ContentMetrics.SectionSpacing),
         ) {
-        SectionTitle(text = s[Str.Library])
-        RoundedColumn(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = ContentMetrics.CardHorizontalPadding,
-                vertical = ContentMetrics.CardVerticalPadding,
-            ),
-        ) {
+        SettingsPanel(outerMargin = panelMargin, title = s[Str.Library]) {
             for (dir in vm.settings.musicDirs) {
                 Row(
                     modifier = Modifier.fillMaxWidth().height(40.dp),
@@ -139,13 +136,7 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
             )
         }
 
-        SectionTitle(text = s[Str.Audio])
-        RoundedColumn(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = ContentMetrics.CardHorizontalPadding,
-                vertical = ContentMetrics.CardVerticalPadding,
-            ),
-        ) {
+        SettingsPanel(outerMargin = panelMargin, title = s[Str.Audio]) {
             for (backend in vm.backends) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -218,15 +209,9 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
             )
         }
 
-        EqualizerSection(vm)
+        EqualizerSection(vm, panelMargin)
 
-        SectionTitle(text = s[Str.Appearance])
-        RoundedColumn(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = ContentMetrics.CardHorizontalPadding,
-                vertical = ContentMetrics.CardVerticalPadding,
-            ),
-        ) {
+        SettingsPanel(outerMargin = panelMargin, title = s[Str.Appearance]) {
             PickerRow(
                 label = s[Str.Theme],
                 options = listOf(
@@ -328,13 +313,7 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
             )
         }
 
-        SectionTitle(text = s[Str.Behaviour])
-        RoundedColumn(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = ContentMetrics.CardHorizontalPadding,
-                vertical = ContentMetrics.CardVerticalPadding,
-            ),
-        ) {
+        SettingsPanel(outerMargin = panelMargin, title = s[Str.Behaviour]) {
             PickerRow(
                 label = s[Str.WindowModeLabel],
                 options = listOf(
@@ -400,24 +379,12 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
             )
         }
 
-        SectionTitle(text = s[Str.DesktopIntegration])
-        RoundedColumn(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = ContentMetrics.CardHorizontalPadding,
-                vertical = ContentMetrics.CardVerticalPadding,
-            ),
-        ) {
+        SettingsPanel(outerMargin = panelMargin, title = s[Str.DesktopIntegration]) {
             InfoLine(s[Str.MprisEnabled], if (BuildInfo.mprisActive) "org.mpris.MediaPlayer2.saltplayer" else s[Str.BackendUnavailable])
             InfoLine(s[Str.SingleInstance], BuildInfo.singleInstanceOwner)
         }
 
-        SectionTitle(text = s[Str.About])
-        RoundedColumn(
-            paddingValues = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = ContentMetrics.CardHorizontalPadding,
-                vertical = ContentMetrics.CardVerticalPadding,
-            ),
-        ) {
+        SettingsPanel(outerMargin = panelMargin, title = s[Str.About]) {
             InfoLine(s[Str.Version], BuildInfo.VERSION)
             InfoLine(s[Str.License], "LGPL-3.0-or-later")
             InfoLine(s[Str.AudioBackend], vm.playerState.backendName)
@@ -457,16 +424,10 @@ private fun backendPreferenceFor(id: String): BackendPreference = when (id) {
 }
 
 @Composable
-private fun EqualizerSection(vm: AppViewModel) {
+private fun EqualizerSection(vm: AppViewModel, panelMargin: androidx.compose.ui.unit.Dp) {
     val s = vm.strings
     val eq = vm.settings.equalizer
-    SectionTitle(text = s[Str.Equalizer])
-    RoundedColumn(
-        paddingValues = androidx.compose.foundation.layout.PaddingValues(
-            horizontal = ContentMetrics.CardHorizontalPadding,
-            vertical = ContentMetrics.CardVerticalPadding,
-        ),
-    ) {
+    SettingsPanel(outerMargin = panelMargin, title = s[Str.Equalizer]) {
         SwitchRow(
             label = s[Str.EqualizerEnabled],
             value = eq.enabled,

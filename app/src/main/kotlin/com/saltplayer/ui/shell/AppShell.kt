@@ -97,16 +97,14 @@ const val TABLET_MIN_WIDTH_DP = 840
  */
 @Composable
 fun AppShell(vm: AppViewModel) {
-    // Backdrop fills the whole window: a soft vertical gradient instead of a flat plate, so the
-    // area around cards never reads as dead empty space.
-    val backdrop = androidx.compose.ui.graphics.Brush.verticalGradient(
-        listOf(
-            SaltTheme.colors.highlight.copy(alpha = 0.10f),
-            SaltTheme.colors.background,
-            SaltTheme.colors.background,
-        )
-    )
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(SaltTheme.colors.background).background(backdrop)) {
+    // The window bed is the same colour as the panels, so the margin between a panel and the
+    // window edge is not a separate band of gradient. A very low-alpha wash keeps a hint of
+    // depth without producing a visible seam next to the panels.
+    val panelBed = com.saltplayer.ui.component.ContentMetrics.panelColor()
+    // No wash is painted over the bed: panels use exactly this colour, and any overlay tint
+    // showed up as a band in the margin around them. Depth comes from the panel hairline and the
+    // accent colour instead.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(panelBed)) {
         val wide = maxWidth.value >= TABLET_MIN_WIDTH_DP
         var drawerOpen by remember { mutableStateOf(false) }
 
@@ -174,7 +172,7 @@ private fun NavigationRail(vm: AppViewModel, modifier: Modifier = Modifier, onNa
     val s = vm.strings
     Column(
         modifier = modifier
-            .background(SaltTheme.colors.subBackground.copy(alpha = 0.55f))
+            .background(com.saltplayer.ui.component.ContentMetrics.panelColor())
             .padding(horizontal = 12.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -183,15 +181,7 @@ private fun NavigationRail(vm: AppViewModel, modifier: Modifier = Modifier, onNa
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(SaltTheme.colors.highlight),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = "♫", color = SaltTheme.colors.onHighlight, fontSize = 15.sp)
-            }
+            com.saltplayer.ui.component.AppLogo(size = 30.dp, corner = 9.dp)
             Text(text = s[Str.AppName], color = SaltTheme.colors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(6.dp))
@@ -285,7 +275,7 @@ private fun TopBar(vm: AppViewModel, showMenuButton: Boolean, onMenuClick: () ->
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
-            .background(SaltTheme.colors.background),
+            .background(com.saltplayer.ui.component.ContentMetrics.panelColor()),
         contentAlignment = Alignment.Center,
     ) {
     Row(
@@ -305,7 +295,7 @@ private fun TopBar(vm: AppViewModel, showMenuButton: Boolean, onMenuClick: () ->
                     .weight(1f)
                     .height(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(SaltTheme.colors.subBackground)
+                    .background(com.saltplayer.ui.component.ContentMetrics.panelColor())
                     .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -414,7 +404,7 @@ private fun MiniPlayerBar(vm: AppViewModel) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SaltTheme.colors.subBackground)
+            .background(com.saltplayer.ui.component.ContentMetrics.panelColor())
             .padding(horizontal = 14.dp, vertical = 6.dp),
     ) {
         if (track != null) {
