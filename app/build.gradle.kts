@@ -67,7 +67,8 @@ tasks.test {
 compose.desktop {
     application {
         mainClass = "com.saltplayer.MainKt"
-        jvmArgs("-Dskiko.renderApi=SOFTWARE")
+        // Keep AWT user space identical to physical pixels so Compose and the X11 surface agree.
+        jvmArgs("-Dsun.java2d.uiScale=1")
 
         nativeDistributions {
             targetFormats(

@@ -128,6 +128,7 @@ class AppViewModel(
 
     fun start() {
         scope.launch {
+            player.prepareEngine()
             reloadLibrary()
             player.restoreSession()
             player.setVolume(settings.volume)

@@ -14,6 +14,15 @@ enum class BackendPreference { Auto, GStreamer, LibMpv, JavaSound }
 
 enum class CloseBehavior { Quit, MinimizeToTray }
 
+/**
+ * How the window asks the compositor to place it.
+ *
+ * Tiling compositors such as niri decide the surface size themselves; on those setups a
+ * windowed instance can end up with a surface larger than the sizes the toolkit reports
+ * (black bands / clipped corners). Fullscreen makes the surface match the screen exactly.
+ */
+enum class WindowMode { Fullscreen, Maximized, Windowed }
+
 enum class ReplayGainMode { Off, Track, Album }
 
 @Serializable
@@ -78,6 +87,7 @@ data class Settings(
     /** GStreamer/ALSA device id; empty means "system default". */
     val outputDevice: String = "",
     val closeBehavior: CloseBehavior = CloseBehavior.Quit,
+    val windowMode: WindowMode = WindowMode.Fullscreen,
     val showTray: Boolean = true,
     val replayGain: ReplayGainMode = ReplayGainMode.Off,
     val equalizer: EqualizerSettings = EqualizerSettings(),
@@ -100,6 +110,9 @@ data class Settings(
         equalizer = equalizer.clamped(),
         sleepTimerMinutes = sleepTimerMinutes.coerceIn(0, 24 * 60),
         lyricOffsetMs = lyricOffsetMs.coerceIn(-30_000, 30_000),
+        // Older builds persisted ARGB Int widened to Long. Accept any value whose low
+        // 32 bits form an opaque colour; reset everything else so the UI cannot grey out.
+        accentColor = accentColor?.takeIf { (it.toInt().ushr(24) and 0xFF) >= 0x80 },
     )
 
     companion object {

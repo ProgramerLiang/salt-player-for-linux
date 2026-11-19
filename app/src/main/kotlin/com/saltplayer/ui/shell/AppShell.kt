@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,7 +28,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Person
@@ -77,7 +78,7 @@ import com.saltplayer.ui.screens.SettingsScreen
 private data class NavItem(val view: LibraryView, val icon: ImageVector, val label: Str)
 
 private val NAV_ITEMS = listOf(
-    NavItem(LibraryView.Songs, Icons.Rounded.LibraryMusic, Str.Songs),
+    NavItem(LibraryView.Songs, Icons.Rounded.Audiotrack, Str.Songs),
     NavItem(LibraryView.Albums, Icons.Rounded.Album, Str.Albums),
     NavItem(LibraryView.Artists, Icons.Rounded.Person, Str.Artists),
     NavItem(LibraryView.Folders, Icons.Rounded.Folder, Str.Folders),
@@ -100,17 +101,31 @@ fun AppShell(vm: AppViewModel) {
         val wide = maxWidth.value >= TABLET_MIN_WIDTH_DP
         var drawerOpen by remember { mutableStateOf(false) }
 
-        Row(modifier = Modifier.fillMaxSize()) {
+        // Nav width scales between 208 and 264 dp so a narrow tile does not squeeze the
+        // content area, while a wide tile does not leave an oversized empty rail.
+        val navWidth = (maxWidth.value * 0.16f).coerceIn(208f, 264f).dp
+        // Compositors that tile with rounded corners (niri) clip the outermost pixels of the
+        // surface. The background is painted edge-to-edge so nothing looks black, while all
+        // interactive content is inset by a safe margin so it is never cut off.
+        val safeInset = 12.dp
+        Row(modifier = Modifier.fillMaxSize().padding(safeInset)) {
             if (wide) {
-                NavigationRail(vm = vm, modifier = Modifier.width(228.dp).fillMaxHeight())
+                NavigationRail(vm = vm, modifier = Modifier.width(navWidth).fillMaxHeight())
             }
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 TopBar(vm = vm, showMenuButton = !wide, onMenuClick = { drawerOpen = true })
                 if (vm.scanState.running) {
                     ScanIndicator(vm)
                 }
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    ContentHost(vm)
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    // Tablet content is centred and capped so lists stay readable on ultrawide
+                    // windows instead of stretching a single column across the whole screen.
+                    Box(modifier = Modifier.fillMaxSize().widthIn(max = 1280.dp)) {
+                        ContentHost(vm)
+                    }
                 }
                 MiniPlayerBar(vm)
             }
@@ -202,8 +217,11 @@ private fun NavigationRail(vm: AppViewModel, modifier: Modifier = Modifier, onNa
             },
         )
         Spacer(Modifier.height(4.dp))
+        val backendLabel = vm.playerState.backendName.ifBlank {
+            vm.backends.firstOrNull { it.available }?.displayName ?: vm.strings[com.saltplayer.ui.i18n.Str.Loading]
+        }
         Text(
-            text = "v${com.saltplayer.BuildInfo.VERSION} · ${vm.playerState.backendName}",
+            text = "v${com.saltplayer.BuildInfo.VERSION} · $backendLabel",
             color = SaltTheme.colors.subText,
             fontSize = 11.sp,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -271,7 +289,7 @@ private fun TopBar(vm: AppViewModel, showMenuButton: Boolean, onMenuClick: () ->
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (showMenuButton) {
-            RoundIconButton(Icons.Rounded.LibraryMusic, "menu", onMenuClick, size = 36.dp)
+            RoundIconButton(Icons.Rounded.Audiotrack, "menu", onMenuClick, size = 36.dp)
         }
         if (vm.searchActive) {
             Row(

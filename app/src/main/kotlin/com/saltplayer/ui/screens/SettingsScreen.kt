@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +46,7 @@ import com.saltplayer.data.prefs.EqualizerSettings
 import com.saltplayer.data.prefs.ReplayGainMode
 import com.saltplayer.data.prefs.Settings
 import com.saltplayer.data.prefs.ThemeMode
+import com.saltplayer.data.prefs.WindowMode
 import com.saltplayer.platform.FolderPicker
 import com.saltplayer.ui.AppViewModel
 import com.saltplayer.ui.component.SaltSlider
@@ -225,14 +227,19 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(text = s[Str.AccentColor], color = SaltTheme.colors.text, fontSize = 14.sp, modifier = Modifier.width(110.dp))
+                Tag(
+                    text = s[Str.UseSystemAccent],
+                    color = if (vm.settings.useSystemAccent) SaltTheme.colors.highlight else SaltTheme.colors.subText,
+                    modifier = Modifier.clickable { vm.updateSettings { it.copy(useSystemAccent = true, accentColor = null) } },
+                )
                 for ((_, color) in AccentPalette.entries) {
-                    val selected = vm.settings.accentColor == color.value.toLong()
+                    val selected = vm.settings.accentColor == color.toArgb().toLong()
                     Box(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
                             .background(color)
-                            .clickable { vm.updateSettings { it.copy(accentColor = color.value.toLong(), useSystemAccent = false) } },
+                            .clickable { vm.updateSettings { it.copy(accentColor = color.toArgb().toLong(), useSystemAccent = false) } },
                         contentAlignment = Alignment.Center,
                     ) {
                         if (selected) Text(text = "✓", color = Color.White, fontSize = 12.sp)
@@ -259,6 +266,16 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
 
         SectionTitle(text = s[Str.Behaviour])
         RoundedColumn {
+            PickerRow(
+                label = s[Str.WindowModeLabel],
+                options = listOf(
+                    WindowMode.Fullscreen to s[Str.WindowModeFullscreen],
+                    WindowMode.Maximized to s[Str.WindowModeMaximized],
+                    WindowMode.Windowed to s[Str.WindowModeWindowed],
+                ),
+                selected = vm.settings.windowMode,
+                onSelect = { mode -> vm.updateSettings { it.copy(windowMode = mode) } },
+            )
             PickerRow(
                 label = s[Str.CloseBehaviour],
                 options = listOf(

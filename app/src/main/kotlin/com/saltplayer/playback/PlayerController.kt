@@ -33,7 +33,8 @@ data class PlayerState(
     val mode: PlayMode = PlayMode.Sequential,
     val volume: Float = 0.8f,
     val rate: Float = 1.0f,
-    val backendName: String = "not initialised",
+    /** Empty until a backend is prepared; the UI shows the probed fallback meanwhile. */
+    val backendName: String = "",
     val backendId: String = "",
     val backendFeatures: List<String> = emptyList(),
     val error: String? = null,
@@ -84,6 +85,7 @@ class PlayerController(
         data class Move(val from: Int, val to: Int) : Command
         data object ClearQueue : Command
         data class JumpTo(val index: Int) : Command
+        data object PrepareEngine : Command
         data object RestoreSession : Command
         data object SaveSession : Command
         data object Shutdown : Command
@@ -141,6 +143,11 @@ class PlayerController(
     fun clearQueue() = commands.trySend(Command.ClearQueue).let { }
 
     fun jumpTo(index: Int) = commands.trySend(Command.JumpTo(index)).let { }
+
+    /** Creates the audio backend eagerly so the UI can report it before the first play. */
+    fun prepareEngine() {
+        commands.trySend(Command.PrepareEngine)
+    }
 
     fun restoreSession() {
         commands.trySend(Command.RestoreSession)
@@ -223,6 +230,7 @@ class PlayerController(
                         move.trackId?.let(resolveTrack)?.let { load(it, 0) }
                     }
 
+                    Command.PrepareEngine -> ensureEngine()
                     Command.RestoreSession -> restoreSessionInternal()
                     Command.SaveSession -> persistSession(force = true)
                     Command.Shutdown -> {

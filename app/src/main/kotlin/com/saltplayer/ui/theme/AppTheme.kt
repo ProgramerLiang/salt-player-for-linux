@@ -60,8 +60,8 @@ fun AppTheme(
         ThemeMode.Light -> false
         ThemeMode.Dark -> true
     }
-    val accent = settings.accentColor?.let { Color(it.toULong().toLong() shl 0) }
-        ?: settings.accentColor?.let { Color(it) }
+    val accent = settings.accentColor
+        ?.let { runCatching { Color(it.toInt()) }.getOrNull() }
         ?: if (settings.useSystemAccent) AccentPalette.fromSystemName(systemAccentName) else null
 
     val lightBase = SaltColors.defaultLight()

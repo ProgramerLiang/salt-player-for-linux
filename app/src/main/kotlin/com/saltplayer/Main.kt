@@ -18,12 +18,14 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.WindowPlacement
 import com.saltplayer.core.AppPaths
 import com.saltplayer.core.Log
 import com.saltplayer.data.db.LibraryDatabase
 import com.saltplayer.data.lyrics.LyricsRepository
 import com.saltplayer.data.media.CoverStore
 import com.saltplayer.data.prefs.CloseBehavior
+import com.saltplayer.data.prefs.WindowMode
 import com.saltplayer.data.prefs.SettingsStore
 import com.saltplayer.data.scan.LibraryScanner
 import com.saltplayer.data.session.SessionStore
@@ -41,7 +43,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.Dimension
 import java.nio.file.Path
 
 fun main() {
@@ -99,7 +100,19 @@ fun main() {
     scope.launch { viewModel.start() }
 
     application {
-        val windowState = rememberWindowState(width = 1180.dp(), height = 800.dp())
+        // No hard-coded window size: niri (and other tiling compositors) own the surface
+        // size. Forcing 1180x800 dp left the Compose canvas smaller than the window and
+        // produced an unpainted dark band on the right/bottom edge.
+        // Tiling compositors own the surface size. On niri a windowed surface ends up larger
+        // than the size the toolkit reports, which shows as black bands or clipped rounded
+        // corners, so the default is fullscreen and the mode is user-selectable in Settings.
+        val windowState = rememberWindowState(
+            placement = when (viewModel.settings.windowMode) {
+                WindowMode.Fullscreen -> WindowPlacement.Fullscreen
+                WindowMode.Maximized -> WindowPlacement.Maximized
+                WindowMode.Windowed -> WindowPlacement.Floating
+            },
+        )
         var windowVisible by remember { mutableStateOf(true) }
         val trayState = rememberTrayState()
         val uiScope = rememberCoroutineScope()
@@ -132,11 +145,12 @@ fun main() {
             },
             state = windowState,
             visible = windowVisible,
-            title = strings[Str.AppName],
+            // In fullscreen the toolkit frame insets would otherwise leave an unpainted
+            // strip along the right and bottom edges.
+            undecorated = viewModel.settings.windowMode == WindowMode.Fullscreen,
+            title = System.getProperty("salt.player.windowTitle") ?: strings[Str.AppName],
         ) {
-            LaunchedEffect(Unit) {
-                window.minimumSize = Dimension(720, 560)
-            }
+
             AppTheme(
                 settings = viewModel.settings,
                 systemDark = viewModel.systemDark,
