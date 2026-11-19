@@ -79,7 +79,7 @@ class GstAudioEngine : AudioEngine {
             if (!Gst.isInitialized()) {
                 Gst.init("SaltPlayer", *emptyArray())
             }
-            val bin = PlayBin("salt-player")
+            val bin = PlayBin("salt-shaker")
             bin.setFlags(EnumSet.of(PlayFlags.AUDIO))
             bin.setVolume(EngineMath.combineVolume(volume, replayGainDb))
 

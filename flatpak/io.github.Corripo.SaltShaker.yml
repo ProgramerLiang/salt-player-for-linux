@@ -1,8 +1,8 @@
-id: io.github.Corripo.SaltPlayer
+id: io.github.Corripo.SaltShaker
 runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
-command: salt-player
+command: salt-shaker
 
 finish-args:
   # D-Bus session bus (MPRIS), app data/config/cache and music folder access.
@@ -12,11 +12,11 @@ finish-args:
   - --socket=pulseaudio
   - --share=network
   - --filesystem=xdg-music:ro
-  - --filesystem=xdg-config/salt-player:rw
-  - --filesystem=xdg-data/salt-player:rw
-  - --filesystem=xdg-cache/salt-player:rw
+  - --filesystem=xdg-config/salt-shaker:rw
+  - --filesystem=xdg-data/salt-shaker:rw
+  - --filesystem=xdg-cache/salt-shaker:rw
   # D-Bus policy: own the MPRIS well-known name and talk to the desktop portal.
-  - --own-name=org.mpris.MediaPlayer2.saltplayer
+  - --own-name=org.mpris.MediaPlayer2.saltshaker
   - --talk-name=org.freedesktop.portal.*
   - --talk-name=org.gnome.SettingsDaemon.MediaKeys
 
@@ -32,19 +32,19 @@ modules:
   # GStreamer plugins from the Freedesktop runtime: base/good/bad/ugly + libav cover
   # the formats supported by the desktop backend. They are part of the runtime, not
   # bundled by the app; the app degrades to Java Sound when they are unavailable.
-  - name: salt-player
+  - name: salt-shaker
     buildsystem: simple
     build-commands:
-      - mkdir -p /app/share/salt-player
-      - cp -a salt-player/* /app/share/salt-player/
-      - install -Dm755 /app/share/salt-player/bin/salt-player /app/bin/salt-player
-      - install -Dm644 io.github.Corripo.SaltPlayer.desktop /app/share/applications/io.github.Corripo.SaltPlayer.desktop
-      - install -Dm644 ../icons/icon.png /app/share/icons/hicolor/512x512/apps/io.github.Corripo.SaltPlayer.png
-      - install -Dm644 ../LICENSE /app/share/licenses/salt-player/LICENSE
+      - mkdir -p /app/share/salt-shaker
+      - cp -a salt-shaker/* /app/share/salt-shaker/
+      - install -Dm755 /app/share/salt-shaker/bin/salt-shaker /app/bin/salt-shaker
+      - install -Dm644 io.github.Corripo.SaltShaker.desktop /app/share/applications/io.github.Corripo.SaltShaker.desktop
+      - install -Dm644 ../icons/icon.png /app/share/icons/hicolor/512x512/apps/io.github.Corripo.SaltShaker.png
+      - install -Dm644 ../LICENSE /app/share/licenses/salt-shaker/LICENSE
     sources:
       - type: dir
         path: ..
         # The Gradle distribution is produced outside the sandbox by CI and copied to
-        # `flatpak/salt-player/` before `flatpak-builder` runs (see README).
+        # `flatpak/salt-shaker/` before `flatpak-builder` runs (see README).
       - type: file
-        path: io.github.Corripo.SaltPlayer.desktop
+        path: io.github.Corripo.SaltShaker.desktop

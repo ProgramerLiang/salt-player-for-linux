@@ -127,8 +127,8 @@ class MprisServer(
                 val track = state.track
                 return when (interfaceName) {
                     ROOT_INTERFACE -> linkedMapOf(
-                        "Identity" to Variant("Salt Player", "s"),
-                        "DesktopEntry" to Variant("salt-player", "s"),
+                        "Identity" to Variant("Salt Shaker", "s"),
+                        "DesktopEntry" to Variant("salt-shaker", "s"),
                         "SupportedUriSchemes" to Variant(emptyList<String>(), "as"),
                         "SupportedMimeTypes" to Variant(
                             listOf("audio/mpeg", "audio/flac", "audio/ogg", "audio/x-wav", "audio/mp4"), "as"
@@ -241,7 +241,7 @@ class MprisServer(
     }
 
     companion object {
-        const val BUS_NAME = "org.mpris.MediaPlayer2.saltplayer"
+        const val BUS_NAME = "org.mpris.MediaPlayer2.saltshaker"
         const val OBJECT_PATH = "/org/mpris/MediaPlayer2"
         const val ROOT_INTERFACE = "org.mpris.MediaPlayer2"
         const val PLAYER_INTERFACE = "org.mpris.MediaPlayer2.Player"

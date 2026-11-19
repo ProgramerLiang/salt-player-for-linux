@@ -62,7 +62,7 @@ class Strings(language: AppLanguage = AppLanguage.System) {
 
     private companion object {
         val chinese: Map<Str, String> = mapOf(
-            Str.AppName to "椒盐音乐",
+            Str.AppName to "椒盐罐",
             Str.Songs to "歌曲", Str.Albums to "专辑", Str.Artists to "艺术家", Str.Folders to "文件夹",
             Str.Playlists to "播放列表", Str.Recent to "最近播放", Str.Favorites to "我的收藏",
             Str.Settings to "设置", Str.Search to "搜索", Str.SearchHint to "搜索歌曲、专辑、艺术家",
@@ -131,7 +131,7 @@ class Strings(language: AppLanguage = AppLanguage.System) {
         )
 
         val english: Map<Str, String> = mapOf(
-            Str.AppName to "Salt Player",
+            Str.AppName to "Salt Shaker",
             Str.Songs to "Songs", Str.Albums to "Albums", Str.Artists to "Artists", Str.Folders to "Folders",
             Str.Playlists to "Playlists", Str.Recent to "Recently played", Str.Favorites to "Favorites",
             Str.Settings to "Settings", Str.Search to "Search", Str.SearchHint to "Search songs, albums, artists",

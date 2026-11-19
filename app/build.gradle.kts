@@ -75,9 +75,9 @@ compose.desktop {
                 TargetFormat.AppImage,
             )
             // tar.gz is not part of Compose TargetFormat; see the packageTarGz task below.
-            packageName = "salt-player"
+            packageName = "salt-shaker"
             packageVersion = "0.2.0"
-            description = "Salt Player for Linux"
+            description = "Salt Shaker - community Linux port of Salt Player (椒盐音乐)"
             vendor = "Corripo"
             copyright = "© 2021-2026 Moriafly · Linux port © 2026 Corripo · MIT"
             includeAllModules = true
@@ -109,12 +109,12 @@ val packageTarGz by tasks.registering(Tar::class) {
     group = "compose desktop"
     description = "Packs the native distributable into a portable .tar.gz archive"
     dependsOn("createDistributable")
-    archiveFileName.set("salt-player-${project.version}-linux-x64.tar.gz")
+    archiveFileName.set("salt-shaker-${project.version}-linux-x64.tar.gz")
     destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/tar.gz"))
     compression = Compression.GZIP
     archiveExtension.set("tar.gz")
     from(layout.buildDirectory.dir("compose/binaries/main/app")) {
-        into("salt-player")
+        into("salt-shaker")
     }
 }
 
@@ -127,8 +127,8 @@ val packageDebFallback by tasks.registering(Exec::class) {
     group = "compose desktop"
     description = "Builds a .deb from the app image without dpkg-deb or fakeroot"
     dependsOn("createDistributable")
-    val imageDir = layout.buildDirectory.dir("compose/binaries/main/app/salt-player")
-    val outputFile = layout.buildDirectory.file("compose/binaries/main/deb/salt-player_${project.version}_amd64.deb")
+    val imageDir = layout.buildDirectory.dir("compose/binaries/main/app/salt-shaker")
+    val outputFile = layout.buildDirectory.file("compose/binaries/main/deb/salt-shaker_${project.version}_amd64.deb")
     inputs.dir(imageDir)
     outputs.file(outputFile)
     commandLine(
@@ -145,10 +145,12 @@ val packageArch by tasks.registering(Exec::class) {
     group = "compose desktop"
     description = "Builds a standard Arch .pkg.tar.zst from the app image"
     dependsOn("createDistributable")
-    val imageDir = layout.buildDirectory.dir("compose/binaries/main/app/salt-player")
-    val outputFile = layout.buildDirectory.file("compose/binaries/main/arch/salt-player-${project.version}-1-x86_64.pkg.tar.zst")
+    val imageDir = layout.buildDirectory.dir("compose/binaries/main/app/salt-shaker")
+    val outputFile = layout.buildDirectory.file("compose/binaries/main/arch/salt-shaker-${project.version}-1-x86_64.pkg.tar.zst")
     inputs.dir(imageDir)
     inputs.file(rootProject.file("icons/icon.png"))
+    // The packaging script itself is an input: edits must rebuild the archive.
+    inputs.file(rootProject.file("scripts/build-arch.sh"))
     outputs.file(outputFile)
     commandLine(
         rootProject.file("scripts/build-arch.sh").absolutePath,

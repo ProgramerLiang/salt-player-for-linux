@@ -25,21 +25,30 @@ class AppPaths(private val env: Map<String, String> = System.getenv()) {
         }
     }
 
-    /** `~/.config/salt-player` */
-    val configDir: Path = xdg("XDG_CONFIG_HOME", ".config").resolve("salt-player")
+    /** `~/.config/salt-shaker` */
+    val configDir: Path = xdg("XDG_CONFIG_HOME", ".config").resolve(APP_DIR)
 
-    /** `~/.local/share/salt-player` */
-    val dataDir: Path = xdg("XDG_DATA_HOME", ".local/share").resolve("salt-player")
+    /** `~/.local/share/salt-shaker` */
+    val dataDir: Path = xdg("XDG_DATA_HOME", ".local/share").resolve(APP_DIR)
 
-    /** `~/.cache/salt-player` */
-    val cacheDir: Path = xdg("XDG_CACHE_HOME", ".cache").resolve("salt-player")
+    /** `~/.cache/salt-shaker` */
+    val cacheDir: Path = xdg("XDG_CACHE_HOME", ".cache").resolve(APP_DIR)
+
+    /** Directories written by the previous name of the project, used only for migration. */
+    val legacyConfigDir: Path = xdg("XDG_CONFIG_HOME", ".config").resolve(LEGACY_APP_DIR)
+    val legacyDataDir: Path = xdg("XDG_DATA_HOME", ".local/share").resolve(LEGACY_APP_DIR)
 
     val settingsFile: Path get() = configDir.resolve("settings.json")
     val sessionFile: Path get() = configDir.resolve("session.json")
     val libraryDbFile: Path get() = dataDir.resolve("library.db")
     val coverDir: Path get() = cacheDir.resolve("covers")
-    val logFile: Path get() = cacheDir.resolve("salt-player.log")
+    val logFile: Path get() = cacheDir.resolve("salt-shaker.log")
     val singleInstanceSocket: Path get() = dataDir.resolve("instance.sock")
+
+    companion object {
+        const val APP_DIR = "salt-shaker"
+        const val LEGACY_APP_DIR = "salt-player"
+    }
 
     fun ensureDirectories() {
         for (dir in listOf(configDir, dataDir, cacheDir, coverDir)) {

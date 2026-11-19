@@ -1,12 +1,15 @@
 # Third-party notices
 
-Salt Player for Linux is licensed **LGPL-3.0-or-later** (see [LICENSE](LICENSE)).
+**椒盐罐 / Salt Shaker is an unofficial community port of Salt Player (椒盐音乐).**
+It is not affiliated with, endorsed by, or supported by Moriafly, the author of Salt Player.
+
+椒盐罐 / Salt Shaker is licensed **LGPL-3.0-or-later** (see [LICENSE](LICENSE)).
 
 ## This repository
 
 | Component | License | Copyright | Notes |
 |:--|:--|:--|:--|
-| Salt Player for Linux (this repository, main code) | LGPL-3.0-or-later | Copyright (C) 2026 Corripo | Linux desktop port |
+| Salt Shaker (this repository, main code) | LGPL-3.0-or-later | Copyright (C) 2026 Corripo | Linux desktop port |
 | Salt Player (椒盐音乐) original work | — | Copyright (C) 2021-2026 Moriafly | The Android app itself is **not** open source; only its public UI toolkit and public documentation/screenshots were used as a design reference. No proprietary code or assets were copied. |
 
 ## Code derived from Moriafly/SaltPlayerCommunity

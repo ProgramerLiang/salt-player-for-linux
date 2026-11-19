@@ -20,40 +20,42 @@ trap 'rm -rf "$WORK"' EXIT
 ROOT="$WORK/pkg"
 INSTALL="$ROOT"
 CONTROL="$WORK/control"
-mkdir -p "$ROOT/DEBIAN" "$INSTALL/usr/share/salt-player" "$INSTALL/usr/share/applications" \
+mkdir -p "$ROOT/DEBIAN" "$INSTALL/usr/share/salt-shaker" "$INSTALL/usr/share/applications" \
          "$INSTALL/usr/share/icons/hicolor/512x512/apps" "$INSTALL/usr/bin"
 
-cp -a "$APP_IMAGE/." "$INSTALL/usr/share/salt-player/"
-cat > "$INSTALL/usr/bin/salt-player" <<'LAUNCH'
+cp -a "$APP_IMAGE/." "$INSTALL/usr/share/salt-shaker/"
+cat > "$INSTALL/usr/bin/salt-shaker" <<'LAUNCH'
 #!/usr/bin/env bash
-exec /usr/share/salt-player/bin/salt-player "$@"
+exec /usr/share/salt-shaker/bin/salt-shaker "$@"
 LAUNCH
-chmod 755 "$INSTALL/usr/bin/salt-player"
-cat > "$INSTALL/usr/share/applications/salt-player.desktop" <<'DESKTOP'
+chmod 755 "$INSTALL/usr/bin/salt-shaker"
+cat > "$INSTALL/usr/share/applications/salt-shaker.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Salt Player
+Name=椒盐罐
+Name[en]=Salt Shaker
 GenericName=Music Player
-Comment=Salt Player (椒盐音乐) for Linux
-Exec=/usr/bin/salt-player %F
-Icon=salt-player
+Comment=椒盐音乐（Salt Player）的 Linux 社区衍生版
+Exec=/usr/bin/salt-shaker %F
+Icon=salt-shaker
 Terminal=false
 Categories=AudioVideo;Audio;Player;
 MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;
 StartupNotify=true
+StartupWMClass=com-saltplayer-MainKt
 DESKTOP
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 for size in 16 24 32 48 64 128 256 512; do
-  install -Dm644 "$ROOT_DIR/icons/hicolor/${size}x${size}/apps/salt-player.png" \
-    "$INSTALL/usr/share/icons/hicolor/${size}x${size}/apps/salt-player.png"
+  install -Dm644 "$ROOT_DIR/icons/hicolor/${size}x${size}/apps/salt-shaker.png" \
+    "$INSTALL/usr/share/icons/hicolor/${size}x${size}/apps/salt-shaker.png"
 done
-install -Dm644 "$ROOT_DIR/icons/salt-player.svg" \
-  "$INSTALL/usr/share/icons/hicolor/scalable/apps/salt-player.svg"
+install -Dm644 "$ROOT_DIR/icons/salt-shaker.svg" \
+  "$INSTALL/usr/share/icons/hicolor/scalable/apps/salt-shaker.svg"
 
 INSTALLED_SIZE=$(du -sk "$INSTALL" | cut -f1)
 cat > "$CONTROL" <<CONTROL
-Package: salt-player
+Package: salt-shaker
 Version: $VERSION
 Section: sound
 Priority: optional

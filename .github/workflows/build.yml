@@ -46,7 +46,7 @@ jobs:
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
-          name: salt-player-linux
+          name: salt-shaker-linux
           path: |
             app/build/compose/binaries/main/deb/*.deb
             app/build/compose/binaries/main/rpm/*.rpm

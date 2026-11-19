@@ -9,15 +9,15 @@ application detects missing elements at runtime and falls back to libmpv or Java
 cd .. && ./gradlew :app:packageTarGz
 
 # 2. Unpack it where flatpak-builder expects it.
-mkdir -p flatpak/salt-player
-tar -xzf app/build/compose/binaries/main/tar.gz/salt-player-*.tar.gz \
-    --strip-components=1 -C flatpak/salt-player
+mkdir -p flatpak/salt-shaker
+tar -xzf app/build/compose/binaries/main/tar.gz/salt-shaker-*.tar.gz \
+    --strip-components=1 -C flatpak/salt-shaker
 
 # 3. Build and install.
-flatpak-builder --user --install --force-clean build-flatpak io.github.Corripo.SaltPlayer.yml
+flatpak-builder --user --install --force-clean build-flatpak io.github.Corripo.SaltShaker.yml
 
 # 4. Run.
-flatpak run io.github.Corripo.SaltPlayer
+flatpak run io.github.Corripo.SaltShaker
 ```
 
 Permissions are deliberately minimal: read-only access to `~/Music`, read/write access only to

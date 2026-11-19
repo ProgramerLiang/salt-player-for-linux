@@ -20,6 +20,7 @@ import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.WindowPlacement
 import com.saltplayer.core.AppPaths
+import com.saltplayer.core.LegacyMigration
 import com.saltplayer.core.Log
 import com.saltplayer.data.db.LibraryDatabase
 import com.saltplayer.data.lyrics.LyricsRepository
@@ -49,6 +50,13 @@ import java.nio.file.Path
 fun main() {
     System.setProperty("java.awt.headless", "false")
     val paths = AppPaths()
+    // Renamed project: bring a previous salt-player installation along before opening anything.
+    LegacyMigration.migrateIfNeeded(
+        configDir = paths.configDir,
+        legacyConfigDir = paths.legacyConfigDir,
+        dataDir = paths.dataDir,
+        legacyDataDir = paths.legacyDataDir,
+    )
     paths.ensureDirectories()
     Log.attach(paths.logFile)
 

@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "salt-player"
+rootProject.name = "salt-shaker"
 include(":app")

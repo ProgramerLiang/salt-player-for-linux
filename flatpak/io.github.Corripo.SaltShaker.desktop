@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Salt Player
+Name=椒盐罐
 GenericName=Music Player
 Comment=Salt Player (椒盐音乐) for Linux
-Exec=salt-player %F
-Icon=io.github.Corripo.SaltPlayer
+Exec=salt-shaker %F
+Icon=io.github.Corripo.SaltShaker
 Terminal=false
 Categories=AudioVideo;Audio;Player;
 MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;
