@@ -67,6 +67,8 @@ tasks.test {
 compose.desktop {
     application {
         mainClass = "com.saltplayer.MainKt"
+        // libmpv refuses mpv_create() under a non-C numeric locale (observed on zh_CN.UTF-8).
+        jvmArgs("-Duser.language=en", "-Duser.country=US")
 
         nativeDistributions {
             targetFormats(

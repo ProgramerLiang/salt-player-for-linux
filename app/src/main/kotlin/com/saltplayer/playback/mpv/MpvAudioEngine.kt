@@ -61,11 +61,11 @@ class MpvAudioEngine : AudioEngine {
     override fun prepare() {
         if (handle != null) return
         val library = loadLibrary() ?: throw EngineUnavailableException(
-            "libmpv could not be loaded: ${jnaError()}. Install it with 'sudo pacman -S mpv' " +
+            "libmpv could not be loaded. Install it with 'sudo pacman -S mpv' " +
                 "(Arch) / 'sudo apt install libmpv2' (Debian)."
         )
         val ctx = library.mpv_create() ?: throw EngineUnavailableException(
-            "mpv_create() failed: ${jnaError()} (libmpv loaded, but the handle could not be created)"
+            "mpv_create() returned NULL (libmpv loaded; see docs for the locale/JNA cause)"
         )
         library.mpv_set_option_string(ctx, "terminal", "no")
         library.mpv_set_option_string(ctx, "really-quiet", "yes")
