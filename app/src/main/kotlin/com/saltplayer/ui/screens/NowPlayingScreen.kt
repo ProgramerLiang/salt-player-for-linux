@@ -45,7 +45,10 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.saltplayer.domain.queue.PlayMode
 import com.saltplayer.ui.AppViewModel
+import androidx.compose.ui.text.withStyle
+import com.saltplayer.ui.component.CoverColorCache
 import com.saltplayer.ui.component.CoverImage
+import com.saltplayer.ui.component.FlowBackground
 import com.saltplayer.ui.component.RoundIconButton
 import com.saltplayer.ui.component.SaltSlider
 import com.saltplayer.ui.formatDuration
@@ -71,10 +74,17 @@ fun NowPlayingScreen(vm: AppViewModel) {
         }
     }
 
+    val accent = SaltTheme.colors.highlight
+    val palette = remember(track.id) {
+        CoverColorCache.get(track.id, vm.coverStore) ?: accent
+    }
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF101014)),
+    ) {
+    FlowBackground(baseColor = palette)
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SaltTheme.colors.background)
             .padding(horizontal = 28.dp, vertical = 14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -206,13 +216,32 @@ fun NowPlayingScreen(vm: AppViewModel) {
                                     .clickable { vm.player.seekTo(line.timeMs - lyrics.offsetMs) }
                                     .padding(vertical = 5.dp),
                             ) {
-                                Text(
-                                    text = line.text,
-                                    color = if (active) SaltTheme.colors.highlight else SaltTheme.colors.subText,
-                                    fontSize = if (active) 17.sp else 15.sp,
-                                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                    lineHeight = 24.sp,
-                                )
+                                if (active && line.hasWords) {
+                                    KaraokeLine(
+                                        line = line,
+                                        positionMs = state.positionMs,
+                                        highlight = SaltTheme.colors.highlight,
+                                        dim = SaltTheme.colors.subText,
+                                    )
+                                } else {
+                                    // Distance-based fade: neighbouring lines dim, so the eye
+                                    // stays on the current one without a hard edge.
+                                    val distance = if (currentLine < 0) 2 else kotlin.math.abs(index - currentLine)
+                                    val alpha = when {
+                                        active -> 1f
+                                        distance == 1 -> 0.55f
+                                        distance == 2 -> 0.32f
+                                        else -> 0.18f
+                                    }
+                                    Text(
+                                        text = line.text,
+                                        color = (if (active) SaltTheme.colors.highlight else SaltTheme.colors.subText)
+                                            .copy(alpha = alpha),
+                                        fontSize = if (active) 17.sp else 15.sp,
+                                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                        lineHeight = 24.sp,
+                                    )
+                                }
                                 if (vm.settings.showLyricTranslation && line.translation != null) {
                                     Text(
                                         text = line.translation!!,
@@ -227,6 +256,40 @@ fun NowPlayingScreen(vm: AppViewModel) {
             }
         }
     }
+    }
+}
+
+/** Renders a line word by word; already-sung syllables take the highlight colour. */
+@Composable
+private fun KaraokeLine(
+    line: com.saltplayer.domain.lyrics.LyricLine,
+    positionMs: Long,
+    highlight: androidx.compose.ui.graphics.Color,
+    dim: androidx.compose.ui.graphics.Color,
+) {
+    val annotated = androidx.compose.runtime.remember(line, positionMs, highlight, dim) {
+        androidx.compose.ui.text.buildAnnotatedString {
+            line.words.forEach { word ->
+                val sung = positionMs >= word.endMs
+                val singing = positionMs >= word.timeMs && !sung
+                withStyle(
+                    androidx.compose.ui.text.SpanStyle(
+                        color = when {
+                            sung -> highlight
+                            singing -> highlight.copy(alpha = 0.85f)
+                            else -> dim.copy(alpha = 0.45f)
+                        }
+                    )
+                ) { append(word.text) }
+            }
+        }
+    }
+    Text(
+        text = annotated,
+        fontSize = 17.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 24.sp,
+    )
 }
 
 @Composable

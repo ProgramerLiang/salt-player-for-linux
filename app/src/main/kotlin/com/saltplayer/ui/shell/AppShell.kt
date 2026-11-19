@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Corripo
 package com.saltplayer.ui.shell
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -125,7 +126,29 @@ fun AppShell(vm: AppViewModel) {
                     ScanIndicator(vm)
                 }
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    ContentHost(vm)
+                    // Fade + small vertical slide between pages keeps navigation legible.
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = vm.screen,
+                        transitionSpec = {
+                            (androidx.compose.animation.fadeIn(
+                                androidx.compose.animation.core.tween(220)
+                            ) + androidx.compose.animation.slideInVertically(
+                                animationSpec = androidx.compose.animation.core.tween(220),
+                                initialOffsetY = { it / 40 },
+                            )).togetherWith(
+                                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
+                            )
+                        },
+                        label = "screen",
+                    ) { screen ->
+                        when (screen) {
+                            is Screen.Library -> LibraryScreen(vm, screen.view)
+                            is Screen.AlbumDetail, is Screen.ArtistDetail,
+                            is Screen.PlaylistDetail, is Screen.FolderDetail -> DetailScreen(vm, screen)
+                            Screen.Search -> SearchScreen(vm)
+                            Screen.Settings -> SettingsScreen(vm)
+                        }
+                    }
                 }
                 MiniPlayerBar(vm)
             }

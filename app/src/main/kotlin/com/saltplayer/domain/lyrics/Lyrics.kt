@@ -2,16 +2,55 @@
 // Copyright (C) 2026 Corripo
 package com.saltplayer.domain.lyrics
 
-/** One timed lyric line, optionally carrying its translation (bilingual lyrics). */
+/**
+ * One timed syllable/word inside a line.
+ *
+ * [endMs] is derived from the next word (or the line end) when the source file omits it, so the
+ * UI can always compute a karaoke fill without extra branches.
+ */
+data class LyricWord(
+    val timeMs: Long,
+    val endMs: Long,
+    val text: String,
+)
+
+/** One timed lyric line, optionally carrying its translation and per-word timings. */
 data class LyricLine(
     val timeMs: Long,
     val text: String,
     val translation: String? = null,
-)
+    val endMs: Long = 0L,
+    /** Empty for line-level lyrics; populated for TTML / YRC / enhanced LRC. */
+    val words: List<LyricWord> = emptyList(),
+) {
+    val hasWords: Boolean get() = words.isNotEmpty()
+
+    /** Fraction (0..1) of this line that has already been "sung" at [positionMs]. */
+    fun progress(positionMs: Long): Float {
+        if (!hasWords) {
+            val end = if (endMs > timeMs) endMs else timeMs + 1
+            return ((positionMs - timeMs).toFloat() / (end - timeMs)).coerceIn(0f, 1f)
+        }
+        val total = words.sumOf { (it.endMs - it.timeMs).coerceAtLeast(1L) }
+        if (total <= 0) return 0f
+        var elapsed = 0L
+        for (word in words) {
+            when {
+                positionMs >= word.endMs -> elapsed += (word.endMs - word.timeMs).coerceAtLeast(1L)
+                positionMs <= word.timeMs -> break
+                else -> {
+                    elapsed += (positionMs - word.timeMs)
+                    break
+                }
+            }
+        }
+        return (elapsed.toFloat() / total).coerceIn(0f, 1f)
+    }
+}
 
 /**
- * Parsed lyrics. [synced] is false for plain-text lyrics where [LyricLine.timeMs] is 0 for
- * every line and the UI shows them as a static block instead of a synced, scrolling view.
+ * Parsed lyrics. [synced] is false for plain-text lyrics; [wordSynced] additionally says whether
+ * per-word timings exist, which drives the karaoke highlight.
  */
 data class Lyrics(
     val lines: List<LyricLine>,
@@ -22,12 +61,15 @@ data class Lyrics(
     val album: String? = null,
     val by: String? = null,
     val source: Source = Source.None,
+    val format: String = "",
 ) {
     enum class Source { Embedded, Sidecar, None }
 
     val isEmpty: Boolean get() = lines.isEmpty()
 
-    /** Index of the line that is active at [positionMs]; -1 when the first line is still ahead. */
+    val wordSynced: Boolean get() = lines.any { it.hasWords }
+
+    /** Index of the line active at [positionMs]; -1 before the first line. */
     fun indexAt(positionMs: Long): Int {
         if (lines.isEmpty()) return -1
         val target = positionMs + offsetMs
@@ -48,7 +90,6 @@ data class Lyrics(
 
     fun lineAt(positionMs: Long): LyricLine? = lines.getOrNull(indexAt(positionMs))
 
-    /** Returns a copy with a shifted offset (used by the manual lyric calibration UI). */
     fun withOffset(offsetMs: Long): Lyrics = copy(offsetMs = offsetMs)
 
     companion object {

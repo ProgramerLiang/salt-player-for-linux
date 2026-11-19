@@ -441,6 +441,8 @@ private fun EqualizerSection(vm: AppViewModel, panelMargin: androidx.compose.ui.
                 fontSize = 11.sp,
             )
         }
+        var saveDialog by remember { mutableStateOf(false) }
+        var presetName by remember { mutableStateOf("") }
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -453,6 +455,73 @@ private fun EqualizerSection(vm: AppViewModel, panelMargin: androidx.compose.ui.
                         vm.updateSettingsAutoEq { it.copy(preset = name, bands = bands) }
                     },
                 )
+            }
+        }
+        // User presets: saved from the current band values and kept in settings.json.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "自定义预设",
+                color = SaltTheme.colors.subText,
+                fontSize = 11.sp,
+            )
+            for ((name, bands) in vm.settings.customPresets) {
+                Tag(
+                    text = if (eq.preset == name) "$name ✓" else name,
+                    color = if (eq.preset == name) SaltTheme.colors.highlight else SaltTheme.colors.subText,
+                    modifier = Modifier.clickable {
+                        vm.updateSettingsAutoEq { it.copy(preset = name, bands = bands) }
+                    },
+                )
+            }
+            Text(
+                text = "+ 保存当前",
+                color = SaltTheme.colors.highlight,
+                fontSize = 11.sp,
+                modifier = Modifier.clickable { saveDialog = true },
+            )
+        }
+        if (saveDialog) {
+            InputDialog(
+                onDismissRequest = { saveDialog = false },
+                onConfirm = {
+                    val result = com.saltplayer.data.prefs.EqualizerPresets.save(
+                        vm.settings.customPresets, presetName, eq.bands,
+                    )
+                    if (result.accepted) {
+                        vm.updateSettings {
+                            it.copy(customPresets = result.presets, equalizer = it.equalizer.copy(preset = presetName.trim()))
+                        }
+                    } else {
+                        vm.showToast(result.reason ?: "保存失败")
+                    }
+                    saveDialog = false
+                    presetName = ""
+                },
+                onChange = { presetName = it },
+                title = "保存均衡器预设",
+                text = presetName,
+                hint = "预设名称",
+            )
+        }
+        if (vm.settings.customPresets.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "删除：", color = SaltTheme.colors.subText, fontSize = 11.sp)
+                for (name in vm.settings.customPresets.keys) {
+                    Text(
+                        text = "$name ✕",
+                        color = SaltTheme.colors.error,
+                        fontSize = 11.sp,
+                        modifier = Modifier.clickable {
+                            vm.updateSettings {
+                                it.copy(customPresets = com.saltplayer.data.prefs.EqualizerPresets.remove(it.customPresets, name))
+                            }
+                        },
+                    )
+                }
             }
         }
         for (index in EqualizerSettings.BAND_FREQUENCIES.indices) {

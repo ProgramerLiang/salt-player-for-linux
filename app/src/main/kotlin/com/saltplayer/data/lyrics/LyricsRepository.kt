@@ -4,6 +4,8 @@ package com.saltplayer.data.lyrics
 
 import com.saltplayer.core.Log
 import com.saltplayer.domain.lyrics.LrcParser
+import com.saltplayer.domain.lyrics.TtmlParser
+import com.saltplayer.domain.lyrics.YrcParser
 import com.saltplayer.domain.lyrics.Lyrics
 import com.saltplayer.domain.model.Track
 import org.jaudiotagger.audio.AudioFileIO
@@ -37,24 +39,43 @@ class LyricsRepository {
         cache.remove(trackId)
     }
 
+    /**
+     * Reads a sidecar lyric file.
+     *
+     * Order matters: word-level formats (TTML, YRC) win over line-level LRC, because only they can
+     * drive the karaoke highlight. Both the track base name and the `Artist - Title` convention
+     * are probed, and every extension is tried before falling back to a worse format.
+     */
     private fun readSidecar(track: Track): Lyrics? {
         val audio = runCatching { Path.of(track.path) }.getOrNull() ?: return null
         val parent = audio.parent ?: return null
         val baseName = audio.fileName.toString().substringBeforeLast('.')
-        val candidates = buildList {
-            add(parent.resolve("$baseName.lrc"))
-            add(parent.resolve("$baseName.LRC"))
+        val stems = buildList {
+            add(baseName)
             if (track.displayArtist.isNotBlank() && track.title.isNotBlank()) {
-                add(parent.resolve("${track.displayArtist} - ${track.title}.lrc"))
+                add("${track.displayArtist} - ${track.title}")
             }
         }
-        for (candidate in candidates) {
-            if (!Files.isRegularFile(candidate)) continue
-            val text = runCatching { Files.readString(candidate) }.getOrNull() ?: continue
-            val parsed = LrcParser.parse(text, Lyrics.Source.Sidecar)
-            if (!parsed.isEmpty) return parsed
+        for (stem in stems) {
+            for ((extension, parser) in PARSERS) {
+                for (candidate in listOf(parent.resolve("$stem$extension"), parent.resolve("$stem${extension.uppercase()}"))) {
+                    if (!Files.isRegularFile(candidate)) continue
+                    val text = runCatching { Files.readString(candidate) }.getOrNull() ?: continue
+                    val parsed = parser(text)
+                    if (!parsed.isEmpty) return parsed
+                }
+            }
         }
         return null
+    }
+
+    private companion object {
+        /** Highest fidelity first: TTML and YRC carry per-syllable timings. */
+        val PARSERS: List<Pair<String, (String) -> Lyrics>> = listOf(
+            ".ttml" to { text: String -> TtmlParser.parse(text, Lyrics.Source.Sidecar) },
+            ".yrc" to { text: String -> YrcParser.parse(text, Lyrics.Source.Sidecar) },
+            ".lrc" to { text: String -> LrcParser.parse(text, Lyrics.Source.Sidecar) },
+        )
     }
 
     private fun readEmbedded(track: Track): Lyrics? {

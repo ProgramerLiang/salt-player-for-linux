@@ -140,7 +140,31 @@ class AppViewModel(
             player.setEqualizer(settings.equalizer)
             player.setOutputDevice(settings.outputDevice)
             player.setRate(settings.playbackSpeed)
-            collectPlayer()
+            // The player state stream never completes; collecting it inline would block backend
+            // probing, the start-up scan and session restore forever.
+            scope.launch { collectPlayer() }
+            // Screenshot/automation hook: open the now-playing page on the first library track
+            // with a synthetic position so the flowing background and karaoke line can be captured
+            // without a real audio device.
+            if (System.getProperty("salt.player.startScreen") == "nowplaying" && tracks.isNotEmpty()) {
+                // Let the player-state collector settle first, otherwise its first emission
+                // overwrites the synthetic demo state immediately.
+                delay(1_200)
+                val demo = tracks.firstOrNull { track ->
+                    val stem = track.path.substringBeforeLast('.')
+                    java.nio.file.Files.isRegularFile(java.nio.file.Path.of("$stem.ttml")) ||
+                        java.nio.file.Files.isRegularFile(java.nio.file.Path.of("$stem.lrc"))
+                } ?: tracks.firstOrNull()
+                if (demo != null) {
+                    playerState = playerState.copy(
+                        track = demo,
+                        durationMs = demo.durationMs.coerceAtLeast(200_000),
+                        positionMs = 26_000,
+                    )
+                    loadLyrics(demo)
+                    nowPlayingOpen = true
+                }
+            }
             probeBackends()
             if (settings.scanOnStartup || tracks.isEmpty()) {
                 rescan(full = tracks.isEmpty())

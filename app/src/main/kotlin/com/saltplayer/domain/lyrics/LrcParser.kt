@@ -18,6 +18,7 @@ object LrcParser {
 
     private val timestamp = Regex("""\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?]""")
     private val metadata = Regex("""^\[(ti|ar|al|by|offset|length|re|ve):\s*(.*?)]$""", RegexOption.IGNORE_CASE)
+    private val inlineWord = Regex("""<(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?>""")
     private val bom = '\uFEFF'
 
     fun parse(raw: String, source: Lyrics.Source = Lyrics.Source.Sidecar): Lyrics {
@@ -32,6 +33,9 @@ object LrcParser {
 
         for (rawLine in text.lineSequence()) {
             val line = rawLine.trim()
+            // NetEase exports prefix credits as JSON objects (`{"t":0,"c":[...]}`); they are not
+            // lyric text and would otherwise be rendered as an unsynchronised block.
+            if (line.startsWith("{")) continue
             if (line.isEmpty()) {
                 if (plain.isNotEmpty()) plain.add("")
                 continue
@@ -50,6 +54,7 @@ object LrcParser {
                 continue
             }
 
+            val inline = inlineWord.findAll(line).toList()
             val stamps = timestamp.findAll(line).toList()
             if (stamps.isEmpty()) {
                 plain.add(line)
@@ -57,6 +62,12 @@ object LrcParser {
             }
             val content = line.substring(stamps.last().range.last + 1).trim()
             if (content.isEmpty()) continue
+            // Enhanced LRC: [mm:ss.xx]<mm:ss.xx>syl<mm:ss.xx>la...
+            val words = if (inline.isNotEmpty()) {
+                buildInlineWords(line, content)
+            } else {
+                emptyList()
+            }
             for (stamp in stamps) {
                 val minutes = stamp.groupValues[1].toLongOrNull() ?: continue
                 val seconds = stamp.groupValues[2].toLongOrNull() ?: continue
@@ -67,7 +78,13 @@ object LrcParser {
                     2 -> fractionRaw.toLong() * 10
                     else -> fractionRaw.take(3).toLong()
                 }
-                timed.add(LyricLine(minutes * 60_000 + seconds * 1_000 + fractionMs, content))
+                timed.add(
+                    LyricLine(
+                        timeMs = minutes * 60_000 + seconds * 1_000 + fractionMs,
+                        text = content,
+                        words = words,
+                    )
+                )
             }
         }
 
@@ -107,6 +124,38 @@ object LrcParser {
             by = by,
             source = source,
         )
+    }
+
+    /** Splits an enhanced line into words using the inline `<mm:ss.xx>` markers. */
+    private fun buildInlineWords(line: String, plain: String): List<LyricWord> {
+        val markers = inlineWord.findAll(line).toList()
+        if (markers.isEmpty()) return emptyList()
+        val words = mutableListOf<LyricWord>()
+        for ((index, marker) in markers.withIndex()) {
+            val start = markerTime(marker) ?: continue
+            val from = marker.range.last + 1
+            val to = markers.getOrNull(index + 1)?.range?.first ?: line.length
+            val text = line.substring(from, to)
+            if (text.isEmpty()) continue
+            words += LyricWord(start, start, text)
+        }
+        if (words.isEmpty()) return emptyList()
+        return words.mapIndexed { index, word ->
+            word.copy(endMs = words.getOrNull(index + 1)?.timeMs ?: (word.timeMs + 200))
+        }
+    }
+
+    private fun markerTime(marker: MatchResult): Long? {
+        val minutes = marker.groupValues[1].toLongOrNull() ?: return null
+        val seconds = marker.groupValues[2].toLongOrNull() ?: return null
+        val fraction = marker.groupValues[3]
+        val ms = when (fraction.length) {
+            0 -> 0L
+            1 -> fraction.toLong() * 100
+            2 -> fraction.toLong() * 10
+            else -> fraction.take(3).toLong()
+        }
+        return minutes * 60_000 + seconds * 1_000 + ms
     }
 
     /** Serialises lyrics back to LRC, used for the "export lyrics" action. */

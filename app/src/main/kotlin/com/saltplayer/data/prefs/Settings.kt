@@ -94,6 +94,8 @@ data class Settings(
     val showTray: Boolean = true,
     val replayGain: ReplayGainMode = ReplayGainMode.Off,
     val equalizer: EqualizerSettings = EqualizerSettings(),
+    /** User-saved equalizer presets (name -> 10 band gains). */
+    val customPresets: Map<String, List<Float>> = emptyMap(),
     val volume: Float = 0.8f,
     val playbackSpeed: Float = 1f,
     val songSort: SongSortKey = SongSortKey.Title,
