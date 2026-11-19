@@ -97,7 +97,10 @@ TAR_FILE="$WORK/salt-player.tar"
     echo '.PKGINFO'
     grep -Fxv '.PKGINFO' "$WORK/archive-files-sorted.txt"
   } > "$WORK/archive-files.txt"
-  tar --format=gnu --owner=0 --group=0 --numeric-owner -cf "$TAR_FILE" -T "$WORK/archive-files.txt"
+  # -T lists both directories and their children; without --no-recursion GNU tar
+  # re-adds each child while expanding the directory, producing duplicate
+  # self-referential hardlink entries that pacman skips on extraction.
+  tar --format=gnu --owner=0 --group=0 --numeric-owner --no-recursion -cf "$TAR_FILE" -T "$WORK/archive-files.txt"
 )
 zstd -3 -q -f -o "$OUTPUT.tmp" "$TAR_FILE"
 [ -s "$OUTPUT.tmp" ] || { echo "compression produced an empty archive" >&2; exit 1; }
@@ -125,6 +128,14 @@ done
 if grep -Eq '^\./' "$TARBALL_LIST"; then
   echo "archive contains invalid ./-prefixed entries" >&2
   grep -E '^\./' "$TARBALL_LIST" | head -5 >&2
+  exit 1
+fi
+# Duplicate entries make GNU tar emit self-referential hardlink records that
+# pacman silently skips, so reject them explicitly.
+DUPLICATES="$(sort "$TARBALL_LIST" | uniq -d)"
+if [ -n "$DUPLICATES" ]; then
+  echo "archive contains duplicate entries (bad for pacman):" >&2
+  echo "$DUPLICATES" | head -10 >&2
   exit 1
 fi
 
