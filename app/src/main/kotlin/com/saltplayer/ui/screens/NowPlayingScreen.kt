@@ -78,10 +78,26 @@ fun NowPlayingScreen(vm: AppViewModel) {
     val palette = remember(track.id) {
         CoverColorCache.get(track.id, vm.coverStore) ?: accent
     }
+    val lightScheme = vm.settings.flowPalette == com.saltplayer.data.prefs.FlowPalette.Light
+    val lyricColors = remember(palette, lightScheme) {
+        com.saltplayer.ui.theme.Contrast.lyricColors(palette, lightScheme)
+    }
+    // Frame-driven clock: the player only publishes every ~400 ms, which would make the wipe step.
+    val smoothPosition by rememberSmoothPosition(state.positionMs, state.playing, state.durationMs)
     androidx.compose.foundation.layout.Box(
-        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF101014)),
+        modifier = Modifier.fillMaxSize(),
     ) {
-    FlowBackground(baseColor = palette)
+    if (vm.settings.flowBackground) {
+        FlowBackground(
+            baseColor = lyricColors.background,
+            animated = vm.settings.flowAnimated,
+        )
+    } else {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.fillMaxSize()
+                .background(lyricColors.background),
+        )
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -216,12 +232,17 @@ fun NowPlayingScreen(vm: AppViewModel) {
                                     .clickable { vm.player.seekTo(line.timeMs - lyrics.offsetMs) }
                                     .padding(vertical = 5.dp),
                             ) {
-                                if (active && line.hasWords) {
-                                    KaraokeLine(
+                                if (active) {
+                                    com.saltplayer.ui.component.KaraokeLine(
                                         line = line,
-                                        positionMs = state.positionMs,
-                                        highlight = SaltTheme.colors.highlight,
-                                        dim = SaltTheme.colors.subText,
+                                        positionMs = smoothPosition,
+                                        style = androidx.compose.ui.text.TextStyle(
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            lineHeight = 24.sp,
+                                        ),
+                                        dimColor = lyricColors.body.copy(alpha = 0.35f),
+                                        highlightColor = lyricColors.highlight,
                                     )
                                 } else {
                                     // Distance-based fade: neighbouring lines dim, so the eye
@@ -235,8 +256,7 @@ fun NowPlayingScreen(vm: AppViewModel) {
                                     }
                                     Text(
                                         text = line.text,
-                                        color = (if (active) SaltTheme.colors.highlight else SaltTheme.colors.subText)
-                                            .copy(alpha = alpha),
+                                        color = lyricColors.body.copy(alpha = alpha),
                                         fontSize = if (active) 17.sp else 15.sp,
                                         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                                         lineHeight = 24.sp,
@@ -259,39 +279,6 @@ fun NowPlayingScreen(vm: AppViewModel) {
     }
 }
 
-/** Renders a line word by word; already-sung syllables take the highlight colour. */
-@Composable
-private fun KaraokeLine(
-    line: com.saltplayer.domain.lyrics.LyricLine,
-    positionMs: Long,
-    highlight: androidx.compose.ui.graphics.Color,
-    dim: androidx.compose.ui.graphics.Color,
-) {
-    val annotated = androidx.compose.runtime.remember(line, positionMs, highlight, dim) {
-        androidx.compose.ui.text.buildAnnotatedString {
-            line.words.forEach { word ->
-                val sung = positionMs >= word.endMs
-                val singing = positionMs >= word.timeMs && !sung
-                withStyle(
-                    androidx.compose.ui.text.SpanStyle(
-                        color = when {
-                            sung -> highlight
-                            singing -> highlight.copy(alpha = 0.85f)
-                            else -> dim.copy(alpha = 0.45f)
-                        }
-                    )
-                ) { append(word.text) }
-            }
-        }
-    }
-    Text(
-        text = annotated,
-        fontSize = 17.sp,
-        fontWeight = FontWeight.SemiBold,
-        lineHeight = 24.sp,
-    )
-}
-
 @Composable
 private fun Tag(text: String, onClick: () -> Unit) {
     Box(
@@ -312,4 +299,37 @@ private fun modeIcon(mode: PlayMode) = when (mode) {
 
 private fun androidx.compose.foundation.lazy.LazyListScope.items(count: Int, content: @Composable (Int) -> Unit) {
     items(count = count, itemContent = { index -> content(index) })
+}
+
+/**
+ * Interpolates the playhead between the player's coarse position updates.
+ *
+ * `withFrameNanos` drives one state write per frame while playing, so the karaoke wipe advances
+ * smoothly instead of stepping every 400 ms. When paused the value simply follows the state.
+ */
+@Composable
+private fun rememberSmoothPosition(
+    positionMs: Long,
+    playing: Boolean,
+    durationMs: Long,
+): androidx.compose.runtime.State<Long> {
+    val state = androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(positionMs) }
+    androidx.compose.runtime.LaunchedEffect(positionMs, playing) {
+        var lastFrame = 0L
+        var base = positionMs
+        state.longValue = positionMs
+        if (!playing) return@LaunchedEffect
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { now ->
+                if (lastFrame != 0L) {
+                    val delta = (now - lastFrame) / 1_000_000
+                    val next = state.longValue + delta
+                    state.longValue = if (durationMs > 0) next.coerceAtMost(durationMs) else next
+                }
+                lastFrame = now
+                if (state.longValue < base) state.longValue = base
+            }
+        }
+    }
+    return state
 }

@@ -25,6 +25,10 @@ enum class WindowMode { Fullscreen, Maximized, Windowed }
 
 enum class ReplayGainMode { Off, Track, Album }
 
+/** Colour scheme for the now-playing background: dark bed with light text, or the reverse. */
+@Serializable
+enum class FlowPalette { Dark, Light }
+
 @Serializable
 enum class SongSortKey { Title, Artist, Album, Duration, Year, AddedAt }
 
@@ -104,6 +108,11 @@ data class Settings(
     val scanFollowSymlinks: Boolean = false,
     val lyricOffsetMs: Long = 0,
     val showLyricTranslation: Boolean = true,
+    /** Cover-colour flowing background on the now-playing page. */
+    val flowBackground: Boolean = true,
+    /** Animate the flow; when false the gradient stays still and costs no GPU time. */
+    val flowAnimated: Boolean = true,
+    val flowPalette: FlowPalette = FlowPalette.Dark,
     @SerialName("sleepTimerMinutes") val sleepTimerMinutes: Int = 0,
 ) {
     /** Defensive normalisation applied after load so a hand-edited file cannot break the UI. */

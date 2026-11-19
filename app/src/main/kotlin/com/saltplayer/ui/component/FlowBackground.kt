@@ -75,6 +75,7 @@ object CoverColorCache {
 fun FlowBackground(
     baseColor: Color,
     modifier: Modifier = Modifier,
+    animated: Boolean = true,
 ) {
     // Track changes cross-fade the palette instead of cutting.
     val current by animateColorAsState(
@@ -82,6 +83,32 @@ fun FlowBackground(
         animationSpec = tween(600),
         label = "palette",
     )
+    if (!animated) {
+        // Static gradient: no infinite transition, so the frame clock stays idle.
+        Canvas(modifier = modifier.fillMaxSize()) {
+            drawBackdrop(current)
+            val radius = size.maxDimension * 0.78f
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(CoverPalette.shiftHue(current, 14f).copy(alpha = 0.8f), Color.Transparent),
+                    center = Offset(size.width * 0.34f, size.height * 0.30f),
+                    radius = radius,
+                ),
+                radius = radius,
+                center = Offset(size.width * 0.34f, size.height * 0.30f),
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(CoverPalette.shiftHue(current, -22f).copy(alpha = 0.7f), Color.Transparent),
+                    center = Offset(size.width * 0.70f, size.height * 0.72f),
+                    radius = radius * 0.92f,
+                ),
+                radius = radius * 0.92f,
+                center = Offset(size.width * 0.70f, size.height * 0.72f),
+            )
+        }
+        return
+    }
     val transition = rememberInfiniteTransition(label = "flow")
     val drift by transition.animateFloat(
         initialValue = 0f,

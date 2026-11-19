@@ -4,7 +4,7 @@ package com.saltplayer
 
 /** Build-time and runtime facts shown in Settings › About. */
 object BuildInfo {
-    const val VERSION = "0.2.0"
+    const val VERSION = "0.2.1"
     const val LICENSE = "LGPL-3.0-or-later"
 
     /** Set by the MPRIS service once the D-Bus name has been acquired. */

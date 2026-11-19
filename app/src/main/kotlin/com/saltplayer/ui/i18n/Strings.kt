@@ -34,6 +34,7 @@ enum class Str {
     WindowModeLabel, WindowModeFullscreen, WindowModeMaximized, WindowModeWindowed,
     RestartNow, WindowModeNeedsRestart, TrayUnavailable, TrayAvailable, NotPlaying,
     UiScale, UiScaleFollowSystem, UiScaleNote, FontScaleLabel,
+    FlowBackground, FlowAnimated, FlowPaletteLabel, FlowPaletteDark, FlowPaletteLight, BackendSelect, BackendAutoRecommended, JavaSound,
     Exit, Minimize, ShowWindow, ErrorNoBackend, ErrorScanFailed, ErrorPlayback, Loading,
     MinuteShort, HourShort, JustNow, Yesterday, DaysAgo,
 }
@@ -98,6 +99,10 @@ class Strings(language: AppLanguage = AppLanguage.System) {
             Str.Appearance to "外观", Str.Theme to "主题", Str.ThemeSystem to "跟随系统", Str.ThemeLight to "浅色",
             Str.ThemeDark to "深色", Str.AccentColor to "主题色", Str.UseSystemAccent to "跟随系统主题色",
             Str.FontScale to "字体缩放", Str.FontScaleLabel to "字体缩放",
+            Str.FlowBackground to "流光背景", Str.FlowAnimated to "动态效果",
+            Str.FlowPaletteLabel to "配色方案", Str.FlowPaletteDark to "深色系", Str.FlowPaletteLight to "浅色系",
+            Str.JavaSound to "Java Sound（兜底）",
+            Str.BackendSelect to "音频后端", Str.BackendAutoRecommended to "自动选择（推荐）",
             Str.UiScale to "界面缩放", Str.UiScaleFollowSystem to "跟随系统",
             Str.UiScaleNote to "界面缩放整体放大文字、控件与间距；字体缩放叠加其上，只影响文字。", Str.Language to "语言", Str.LanguageSystem to "跟随系统",
             Str.LanguageChinese to "简体中文", Str.LanguageEnglish to "English",

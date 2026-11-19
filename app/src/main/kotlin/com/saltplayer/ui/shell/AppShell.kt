@@ -4,6 +4,10 @@ package com.saltplayer.ui.shell
 
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -209,17 +214,45 @@ private fun NavigationRail(vm: AppViewModel, modifier: Modifier = Modifier, onNa
         }
         Spacer(Modifier.height(6.dp))
 
-        for (item in NAV_ITEMS) {
-            val selected = (vm.screen as? Screen.Library)?.view == item.view
-            NavRow(
-                icon = item.icon,
-                label = s[item.label],
-                selected = selected,
-                onClick = {
-                    vm.openScreen(Screen.Library(item.view))
-                    onNavigate()
-                },
-            )
+        // Sliding selection pill: the rail has a fixed row rhythm, so the indicator can be
+        // animated as a single composable property (offset) instead of cross-fading two rows.
+        val selectedIndex = NAV_ITEMS.indexOfFirst { item ->
+            (vm.screen as? Screen.Library)?.view == item.view
+        }
+        val rowStep = 44.dp
+        val pillY by androidx.compose.animation.core.animateDpAsState(
+            targetValue = rowStep * selectedIndex.coerceAtLeast(0),
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 220,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing,
+            ),
+            label = "nav-pill",
+        )
+        Box(modifier = Modifier.fillMaxWidth().height(rowStep * NAV_ITEMS.size)) {
+            if (selectedIndex >= 0) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .offset(y = pillY)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SaltTheme.colors.highlight.copy(alpha = 0.14f)),
+                )
+            }
+            Column {
+                for (item in NAV_ITEMS) {
+                    val selected = (vm.screen as? Screen.Library)?.view == item.view
+                    NavRow(
+                        icon = item.icon,
+                        label = s[item.label],
+                        selected = selected,
+                        onClick = {
+                            vm.openScreen(Screen.Library(item.view))
+                            onNavigate()
+                        },
+                    )
+                }
+            }
         }
         Spacer(Modifier.weight(1f))
         NavRow(
@@ -246,12 +279,42 @@ private fun NavigationRail(vm: AppViewModel, modifier: Modifier = Modifier, onNa
 
 @Composable
 private fun NavRow(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    // Only compositor-friendly properties animate: colour/alpha, a 1.5 dp offset and a 1.06 scale.
+    val tint by androidx.compose.animation.animateColorAsState(
+        targetValue = when {
+            selected -> SaltTheme.colors.highlight
+            hovered -> SaltTheme.colors.text
+            else -> SaltTheme.colors.subText
+        },
+        animationSpec = androidx.compose.animation.core.tween(140),
+        label = "nav-tint",
+    )
+    val lift by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (hovered) 1.5.dp else 0.dp,
+        animationSpec = androidx.compose.animation.core.tween(
+            140,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing,
+        ),
+        label = "nav-lift",
+    )
+    val iconScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (selected) 1.06f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(
+            180,
+            easing = androidx.compose.animation.core.FastOutSlowInEasing,
+        ),
+        label = "nav-icon",
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(42.dp)
+            .offset(y = -lift)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) SaltTheme.colors.highlight.copy(alpha = 0.14f) else Color.Transparent)
+            .background(if (hovered && !selected) SaltTheme.colors.text.copy(alpha = 0.05f) else Color.Transparent)
+            .hoverable(interaction)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -260,12 +323,14 @@ private fun NavRow(icon: ImageVector, label: String, selected: Boolean, onClick:
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (selected) SaltTheme.colors.highlight else SaltTheme.colors.subText,
-            modifier = Modifier.size(19.dp),
+            tint = tint,
+            modifier = Modifier
+                .size(19.dp)
+                .scale(iconScale),
         )
         Text(
             text = label,
-            color = if (selected) SaltTheme.colors.highlight else SaltTheme.colors.text,
+            color = tint,
             fontSize = 14.sp,
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
         )

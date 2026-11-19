@@ -44,6 +44,7 @@ import com.saltplayer.data.prefs.AppLanguage
 import com.saltplayer.data.prefs.BackendPreference
 import com.saltplayer.data.prefs.CloseBehavior
 import com.saltplayer.data.prefs.EqualizerSettings
+import com.saltplayer.data.prefs.FlowPalette
 import com.saltplayer.data.prefs.ReplayGainMode
 import com.saltplayer.data.prefs.Settings
 import com.saltplayer.data.prefs.ThemeMode
@@ -137,9 +138,66 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
         }
 
         SettingsPanel(outerMargin = panelMargin, title = s[Str.Audio]) {
+            var backendMenu by remember { mutableStateOf(false) }
+            val currentLabel = when (vm.settings.backendPreference) {
+                BackendPreference.Auto -> s[Str.BackendAutoRecommended]
+                BackendPreference.GStreamer -> "GStreamer"
+                BackendPreference.LibMpv -> "libmpv"
+                BackendPreference.JavaSound -> s[Str.JavaSound]
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = s[Str.BackendSelect], color = SaltTheme.colors.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Box {
+                    Text(
+                        text = currentLabel,
+                        color = SaltTheme.colors.highlight,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .clickable { backendMenu = true }
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                    )
+                    com.moriafly.salt.ui.popup.PopupMenu(
+                        expanded = backendMenu,
+                        onDismissRequest = { backendMenu = false },
+                    ) {
+                        val options = listOf(
+                            BackendPreference.Auto to s[Str.BackendAutoRecommended],
+                            BackendPreference.GStreamer to "GStreamer",
+                            BackendPreference.LibMpv to "libmpv",
+                            BackendPreference.JavaSound to s[Str.JavaSound],
+                        )
+                        for ((preference, label) in options) {
+                            // An unavailable backend is still listed (so the reason is visible) but
+                            // cannot be selected: choosing it would leave the app silent.
+                            val descriptor = vm.backends.firstOrNull {
+                                val id = when (preference) {
+                                    BackendPreference.Auto -> null
+                                    BackendPreference.GStreamer -> "gstreamer"
+                                    BackendPreference.LibMpv -> "libmpv"
+                                    BackendPreference.JavaSound -> "javasound"
+                                }
+                                id != null && it.id == id
+                            }
+                            val enabled = preference == BackendPreference.Auto || descriptor?.available == true
+                            com.moriafly.salt.ui.popup.PopupMenuItem(
+                                onClick = {
+                                    backendMenu = false
+                                    if (enabled) vm.selectBackend(preference, label)
+                                },
+                                text = if (enabled) label else "$label · ${s[Str.BackendUnavailable]}",
+                                sub = descriptor?.takeIf { !it.available }?.detail,
+                                selected = vm.settings.backendPreference == preference,
+                            )
+                        }
+                    }
+                }
+            }
             for (backend in vm.backends) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -147,14 +205,12 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
                             Text(
                                 text = backend.displayName,
                                 color = if (backend.available) SaltTheme.colors.text else SaltTheme.colors.subText,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp,
                             )
                             Spacer(Modifier.width(8.dp))
                             if (vm.playerState.backendId == backend.id) Tag(text = "active")
                             if (!backend.available) Tag(text = s[Str.BackendUnavailable], color = SaltTheme.colors.error)
                         }
-                        Text(text = backend.detail, color = SaltTheme.colors.subText, fontSize = 11.sp)
                         if (backend.available) {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 for (feature in backend.capabilities.supportedFeatures()) {
@@ -162,20 +218,9 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
                                 }
                             }
                         } else {
-                            backend.installHint?.let {
-                                Text(
-                                    text = "${s[Str.InstallHint]}: $it",
-                                    color = SaltTheme.colors.warning,
-                                    fontSize = 10.sp,
-                                )
-                            }
+                            Text(text = backend.detail, color = SaltTheme.colors.warning, fontSize = 10.sp)
                         }
                     }
-                    Button(
-                        onClick = { vm.updateSettings { it.copy(backendPreference = backendPreferenceFor(backend.id)) } },
-                        text = if (vm.settings.backendPreference == backendPreferenceFor(backend.id)) s[Str.BackendPinned] else s[Str.BackendAuto],
-                        enabled = backend.available,
-                    )
                 }
             }
             Row(
@@ -212,6 +257,25 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
         EqualizerSection(vm, panelMargin)
 
         SettingsPanel(outerMargin = panelMargin, title = s[Str.Appearance]) {
+            SwitchRow(
+                label = s[Str.FlowBackground],
+                value = vm.settings.flowBackground,
+                onChange = { value -> vm.updateSettings { it.copy(flowBackground = value) } },
+            )
+            SwitchRow(
+                label = s[Str.FlowAnimated],
+                value = vm.settings.flowAnimated,
+                onChange = { value -> vm.updateSettings { it.copy(flowAnimated = value) } },
+            )
+            PickerRow(
+                label = s[Str.FlowPaletteLabel],
+                options = listOf(
+                    FlowPalette.Dark to s[Str.FlowPaletteDark],
+                    FlowPalette.Light to s[Str.FlowPaletteLight],
+                ),
+                selected = vm.settings.flowPalette,
+                onSelect = { palette -> vm.updateSettings { it.copy(flowPalette = palette) } },
+            )
             PickerRow(
                 label = s[Str.Theme],
                 options = listOf(

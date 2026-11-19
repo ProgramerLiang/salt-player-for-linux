@@ -320,6 +320,13 @@ class AppViewModel(
     }
 
     /** Re-probes the audio backends and refreshes the settings list. */
+    /** Switches audio backend: persists the choice, rebuilds the engine and reports the outcome. */
+    fun selectBackend(preference: com.saltplayer.data.prefs.BackendPreference, label: String) {
+        updateSettings { it.copy(backendPreference = preference) }
+        player.reloadEngine()
+        showToast("后端：$label")
+    }
+
     fun rescanBackendsAsync() {
         scope.launch {
             probeBackends()

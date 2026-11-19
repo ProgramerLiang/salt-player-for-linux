@@ -86,6 +86,7 @@ class PlayerController(
         data object ClearQueue : Command
         data class JumpTo(val index: Int) : Command
         data object PrepareEngine : Command
+        data object ReloadEngine : Command
         data object RestoreSession : Command
         data object SaveSession : Command
         data object Shutdown : Command
@@ -145,6 +146,11 @@ class PlayerController(
     fun jumpTo(index: Int) = commands.trySend(Command.JumpTo(index)).let { }
 
     /** Creates the audio backend eagerly so the UI can report it before the first play. */
+    /** Rebuilds the backend after the user picks a different one in Settings. */
+    fun reloadEngine() {
+        commands.trySend(Command.ReloadEngine)
+    }
+
     fun prepareEngine() {
         commands.trySend(Command.PrepareEngine)
     }
@@ -231,6 +237,11 @@ class PlayerController(
                     }
 
                     Command.PrepareEngine -> ensureEngine()
+                    Command.ReloadEngine -> {
+                        engine?.close()
+                        engine = null
+                        ensureEngine()
+                    }
                     Command.RestoreSession -> restoreSessionInternal()
                     Command.SaveSession -> persistSession(force = true)
                     Command.Shutdown -> {

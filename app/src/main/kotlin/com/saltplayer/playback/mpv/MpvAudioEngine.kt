@@ -40,7 +40,7 @@ class MpvAudioEngine : AudioEngine {
         wideFormatSupport = true,
     )
 
-    private var lib: Mpv? = null
+    private var lib: MpvBindings? = null
     private var handle: Pointer? = null
     private var events: Thread? = null
 
@@ -61,9 +61,12 @@ class MpvAudioEngine : AudioEngine {
     override fun prepare() {
         if (handle != null) return
         val library = loadLibrary() ?: throw EngineUnavailableException(
-            "libmpv is not installed (no libmpv.so found on the library path)"
+            "libmpv could not be loaded: ${jnaError()}. Install it with 'sudo pacman -S mpv' " +
+                "(Arch) / 'sudo apt install libmpv2' (Debian)."
         )
-        val ctx = library.mpv_create() ?: throw EngineUnavailableException("mpv_create() returned NULL")
+        val ctx = library.mpv_create() ?: throw EngineUnavailableException(
+            "mpv_create() failed: ${jnaError()} (libmpv loaded, but the handle could not be created)"
+        )
         library.mpv_set_option_string(ctx, "terminal", "no")
         library.mpv_set_option_string(ctx, "really-quiet", "yes")
         library.mpv_set_option_string(ctx, "no-video", "yes")
@@ -86,11 +89,20 @@ class MpvAudioEngine : AudioEngine {
         Log.info("Mpv", "libmpv ready")
     }
 
-    private fun loadLibrary(): Mpv? {
+    private fun jnaError(): String = com.sun.jna.Native.getLastError().toString()
+
+    private fun loadLibrary(): MpvBindings? {
+        val attempted = mutableListOf<String>()
         for (name in listOf("mpv", "libmpv.so.2", "libmpv.so.1", "libmpv.2.dylib")) {
-            val loaded = runCatching { Native.load(name, Mpv::class.java) }.getOrNull()
-            if (loaded != null) return loaded
+            val loaded = runCatching { Native.load(name, MpvBindings::class.java) }
+                .onFailure { attempted += "$name: ${it.message}" }
+                .getOrNull()
+            if (loaded != null) {
+                Log.info("Mpv", "loaded native library '$name'")
+                return loaded
+            }
         }
+        if (attempted.isNotEmpty()) Log.warn("Mpv", "libmpv load attempts: ${attempted.joinToString("; ")}")
         return null
     }
 
@@ -229,7 +241,7 @@ class MpvAudioEngine : AudioEngine {
         }
     }
 
-    private fun handleEndFile(library: Mpv, data: Pointer?) {
+    private fun handleEndFile(library: MpvBindings, data: Pointer?) {
         val reason = data?.getInt(0) ?: -1
         when (reason) {
             END_REASON_EOF -> {
@@ -294,20 +306,6 @@ class MpvAudioEngine : AudioEngine {
     }
 
     private fun quote(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-
-    /** Minimal libmpv surface: enough for playback control without a heavyweight binding. */
-    private interface Mpv : Library {
-        fun mpv_create(): Pointer?
-        fun mpv_initialize(ctx: Pointer): Int
-        fun mpv_terminate_destroy(ctx: Pointer)
-        fun mpv_set_option_string(ctx: Pointer, name: String, value: String): Int
-        fun mpv_set_property_string(ctx: Pointer, name: String, value: String): Int
-        fun mpv_get_property(ctx: Pointer, name: String, format: Int, data: Pointer): Int
-        fun mpv_command_string(ctx: Pointer, command: String): Int
-        fun mpv_observe_property(ctx: Pointer, replyUserData: Long, name: String, format: Int): Int
-        fun mpv_wait_event(ctx: Pointer, timeoutSeconds: Double): Pointer?
-        fun mpv_error_string(code: Int): String
-    }
 
     companion object {
         const val ID = "libmpv"
