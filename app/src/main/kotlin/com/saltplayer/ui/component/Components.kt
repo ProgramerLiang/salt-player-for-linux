@@ -53,12 +53,20 @@ import org.jetbrains.skia.Image
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 
-/** Cached cover art loader: decoded once per track and kept in memory. */
+/**
+ * Cached cover art loader: decoded once per track and kept in memory.
+ *
+ * Tracks without artwork are remembered in [missing] instead of storing `null` in the map —
+ * `ConcurrentHashMap` rejects null values, which previously threw an NPE on the AWT event
+ * thread and surfaced as an exception dialog whenever a cover-less track scrolled into view.
+ */
 object CoverCache {
-    private val cache = ConcurrentHashMap<Long, ImageBitmap?>()
+    private val cache = ConcurrentHashMap<Long, ImageBitmap>()
+    private val missing: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 
     suspend fun load(store: CoverStore, trackId: Long): ImageBitmap? {
         cache[trackId]?.let { return it }
+        if (trackId in missing) return null
         val bitmap = withContext(Dispatchers.IO) {
             val file = store.thumbnail(trackId) ?: return@withContext null
             runCatching {
@@ -66,12 +74,18 @@ object CoverCache {
                 Image.makeFromEncoded(bytes).toComposeImageBitmap()
             }.getOrNull()
         }
-        cache[trackId] = bitmap
+        if (bitmap == null) {
+            missing.add(trackId)
+        } else {
+            cache[trackId] = bitmap
+            missing.remove(trackId)
+        }
         return bitmap
     }
 
     fun invalidate(trackId: Long) {
         cache.remove(trackId)
+        missing.remove(trackId)
     }
 }
 

@@ -18,10 +18,11 @@ object LegacyMigration {
     data class Result(
         val configCopied: Boolean = false,
         val dataCopied: Boolean = false,
+        val cacheCopied: Boolean = false,
         val bytesCopied: Long = 0,
         val skippedReason: String? = null,
     ) {
-        val didSomething: Boolean get() = configCopied || dataCopied
+        val didSomething: Boolean get() = configCopied || dataCopied || cacheCopied
     }
 
     /**
@@ -33,6 +34,8 @@ object LegacyMigration {
         legacyConfigDir: Path,
         dataDir: Path,
         legacyDataDir: Path,
+        cacheDir: Path? = null,
+        legacyCacheDir: Path? = null,
     ): Result {
         if (Files.exists(configDir) || Files.exists(dataDir)) {
             return Result(skippedReason = "target directory already exists")
@@ -42,6 +45,7 @@ object LegacyMigration {
         }
         var configCopied = false
         var dataCopied = false
+        var cacheCopied = false
         var bytes = 0L
         runCatching {
             if (Files.isDirectory(legacyConfigDir)) {
@@ -53,11 +57,17 @@ object LegacyMigration {
                 bytes += copyTree(legacyDataDir, dataDir, skipNames = setOf("instance.sock"))
                 dataCopied = true
             }
+            // Extracted cover art lives in the cache; without it every migrated track would
+            // show the placeholder until the library is rescanned.
+            if (cacheDir != null && legacyCacheDir != null && Files.isDirectory(legacyCacheDir)) {
+                bytes += copyTree(legacyCacheDir, cacheDir, skipNames = setOf("salt-player.log"))
+                cacheCopied = true
+            }
         }.onFailure { Log.warn("Migration", "legacy data migration failed", it) }
-        if (configCopied || dataCopied) {
+        if (configCopied || dataCopied || cacheCopied) {
             Log.info("Migration", "migrated salt-player -> salt-shaker ($bytes bytes)")
         }
-        return Result(configCopied, dataCopied, bytes, null)
+        return Result(configCopied, dataCopied, cacheCopied, bytes, null)
     }
 
     private fun copyTree(source: Path, target: Path, skipNames: Set<String> = emptySet()): Long {

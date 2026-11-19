@@ -56,6 +56,8 @@ fun main() {
         legacyConfigDir = paths.legacyConfigDir,
         dataDir = paths.dataDir,
         legacyDataDir = paths.legacyDataDir,
+        cacheDir = paths.cacheDir,
+        legacyCacheDir = paths.legacyCacheDir,
     )
     paths.ensureDirectories()
     Log.attach(paths.logFile)

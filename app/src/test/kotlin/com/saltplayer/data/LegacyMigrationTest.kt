@@ -43,6 +43,30 @@ class LegacyMigrationTest {
     }
 
     @Test
+    fun `migrates extracted cover art from the cache so migrated tracks keep their artwork`() {
+        val root = Files.createTempDirectory("migrate4")
+        val oldConfig = root.resolve("config/salt-player")
+        val oldData = root.resolve("data/salt-player")
+        val oldCache = root.resolve("cache/salt-player")
+        seed(oldConfig, mapOf("settings.json" to "{}"))
+        seed(oldData, mapOf("library.db" to "db"))
+        seed(oldCache, mapOf("covers/cover-1.jpg" to "jpeg-bytes", "salt-player.log" to "log"))
+
+        val result = LegacyMigration.migrateIfNeeded(
+            configDir = root.resolve("config/salt-shaker"),
+            legacyConfigDir = oldConfig,
+            dataDir = root.resolve("data/salt-shaker"),
+            legacyDataDir = oldData,
+            cacheDir = root.resolve("cache/salt-shaker"),
+            legacyCacheDir = oldCache,
+        )
+
+        assertTrue(result.cacheCopied)
+        assertEquals("jpeg-bytes", Files.readString(root.resolve("cache/salt-shaker/covers/cover-1.jpg")))
+        assertFalse(Files.exists(root.resolve("cache/salt-shaker/salt-player.log")))
+    }
+
+    @Test
     fun `does nothing when the new directories already exist`() {
         val root = Files.createTempDirectory("migrate2")
         val oldConfig = root.resolve("config/salt-player")

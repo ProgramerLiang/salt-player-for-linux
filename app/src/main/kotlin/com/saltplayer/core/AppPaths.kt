@@ -37,6 +37,7 @@ class AppPaths(private val env: Map<String, String> = System.getenv()) {
     /** Directories written by the previous name of the project, used only for migration. */
     val legacyConfigDir: Path = xdg("XDG_CONFIG_HOME", ".config").resolve(LEGACY_APP_DIR)
     val legacyDataDir: Path = xdg("XDG_DATA_HOME", ".local/share").resolve(LEGACY_APP_DIR)
+    val legacyCacheDir: Path = xdg("XDG_CACHE_HOME", ".cache").resolve(LEGACY_APP_DIR)
 
     val settingsFile: Path get() = configDir.resolve("settings.json")
     val sessionFile: Path get() = configDir.resolve("session.json")
