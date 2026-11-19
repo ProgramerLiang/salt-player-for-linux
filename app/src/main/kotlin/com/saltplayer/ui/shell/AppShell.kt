@@ -97,7 +97,16 @@ const val TABLET_MIN_WIDTH_DP = 840
  */
 @Composable
 fun AppShell(vm: AppViewModel) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(SaltTheme.colors.background)) {
+    // Backdrop fills the whole window: a soft vertical gradient instead of a flat plate, so the
+    // area around cards never reads as dead empty space.
+    val backdrop = androidx.compose.ui.graphics.Brush.verticalGradient(
+        listOf(
+            SaltTheme.colors.highlight.copy(alpha = 0.10f),
+            SaltTheme.colors.background,
+            SaltTheme.colors.background,
+        )
+    )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(SaltTheme.colors.background).background(backdrop)) {
         val wide = maxWidth.value >= TABLET_MIN_WIDTH_DP
         var drawerOpen by remember { mutableStateOf(false) }
 
@@ -117,15 +126,8 @@ fun AppShell(vm: AppViewModel) {
                 if (vm.scanState.running) {
                     ScanIndicator(vm)
                 }
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.TopCenter,
-                ) {
-                    // Tablet content is centred and capped so lists stay readable on ultrawide
-                    // windows instead of stretching a single column across the whole screen.
-                    Box(modifier = Modifier.fillMaxSize().widthIn(max = 1280.dp)) {
-                        ContentHost(vm)
-                    }
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    ContentHost(vm)
                 }
                 MiniPlayerBar(vm)
             }
@@ -423,7 +425,7 @@ private fun MiniPlayerBar(vm: AppViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (track == null) {
-                Text(text = s[Str.NoResults], color = SaltTheme.colors.subText, fontSize = 13.sp)
+                Text(text = s[Str.NotPlaying], color = SaltTheme.colors.subText, fontSize = 13.sp)
                 Spacer(Modifier.weight(1f))
                 return@Column
             }

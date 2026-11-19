@@ -19,8 +19,7 @@ done
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 PKG="$WORK/pkg"
-mkdir -p "$PKG/usr/share/salt-player" "$PKG/usr/share/applications" \
-         "$PKG/usr/share/icons/hicolor/512x512/apps" "$PKG/usr/bin"
+mkdir -p "$PKG/usr/share/salt-player" "$PKG/usr/share/applications" "$PKG/usr/bin"
 
 cp -a "$APP_IMAGE/." "$PKG/usr/share/salt-player/"
 cat > "$PKG/usr/bin/salt-player" <<'LAUNCH'
@@ -42,7 +41,30 @@ Categories=AudioVideo;Audio;Player;
 MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;
 StartupNotify=true
 DESKTOP
-cp "$REPO_ROOT/icons/icon.png" "$PKG/usr/share/icons/hicolor/512x512/apps/salt-player.png"
+# Install every hicolor size plus the scalable source so the launcher, dock and switcher
+# each pick a crisp bitmap instead of downscaling a single 512px file.
+for size in 16 24 32 48 64 128 256 512; do
+  install -Dm644 "$REPO_ROOT/icons/hicolor/${size}x${size}/apps/salt-player.png" \
+    "$PKG/usr/share/icons/hicolor/${size}x${size}/apps/salt-player.png"
+done
+install -Dm644 "$REPO_ROOT/icons/salt-player.svg" \
+  "$PKG/usr/share/icons/hicolor/scalable/apps/salt-player.svg"
+
+# Post-install scriptlet: refresh the icon cache and desktop database so the launcher shows
+# the application icon immediately after installation instead of after the next login.
+cat > "$PKG/.INSTALL" <<'INSTALL'
+post_install() {
+  gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+  update-desktop-database -q /usr/share/applications 2>/dev/null || true
+}
+post_upgrade() {
+  post_install
+}
+post_remove() {
+  gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor 2>/dev/null || true
+  update-desktop-database -q /usr/share/applications 2>/dev/null || true
+}
+INSTALL
 
 # Standard Arch package metadata. pacman installs any archive containing .PKGINFO.
 INSTALLED_SIZE=$(du -sk "$PKG" | cut -f1)

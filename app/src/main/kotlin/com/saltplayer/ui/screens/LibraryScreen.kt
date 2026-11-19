@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -122,7 +123,10 @@ private fun SongsScreen(vm: AppViewModel) {
                 }
             }
         }
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().widthIn(max = 1040.dp).align(Alignment.CenterHorizontally)
+                .padding(horizontal = 12.dp),
+        ) {
             itemsIndexed(vm.tracks, key = { _, track -> track.id }) { index, track ->
                 TrackRow(
                     track = track,

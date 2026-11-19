@@ -47,6 +47,7 @@ import com.saltplayer.data.prefs.ReplayGainMode
 import com.saltplayer.data.prefs.Settings
 import com.saltplayer.data.prefs.ThemeMode
 import com.saltplayer.data.prefs.WindowMode
+import com.saltplayer.platform.AppControl
 import com.saltplayer.platform.FolderPicker
 import com.saltplayer.ui.AppViewModel
 import com.saltplayer.ui.component.SaltSlider
@@ -274,8 +275,25 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
                     WindowMode.Windowed to s[Str.WindowModeWindowed],
                 ),
                 selected = vm.settings.windowMode,
-                onSelect = { mode -> vm.updateSettings { it.copy(windowMode = mode) } },
+                onSelect = { mode ->
+                    if (mode != vm.settings.windowMode) {
+                        vm.updateSettings { it.copy(windowMode = mode) }
+                        // Compose Desktop cannot re-decorate a live native window without a
+                        // restart (doing so crashes under XWayland), so say it explicitly.
+                        vm.showToast(s[Str.WindowModeNeedsRestart])
+                    }
+                },
             )
+            if (AppControl.restart != null) {
+                Text(
+                    text = s[Str.RestartNow],
+                    color = SaltTheme.colors.highlight,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .clickable { AppControl.restart?.invoke() },
+                )
+            }
             PickerRow(
                 label = s[Str.CloseBehaviour],
                 options = listOf(
@@ -287,9 +305,23 @@ fun SettingsScreen(vm: AppViewModel, forceEqualizer: Boolean = false) {
             )
             SwitchRow(
                 label = s[Str.ShowTray],
-                value = vm.settings.showTray,
-                onChange = { value -> vm.updateSettings { it.copy(showTray = value) } },
+                value = vm.settings.showTray && AppControl.traySupported,
+                onChange = { value ->
+                    if (AppControl.traySupported) {
+                        vm.updateSettings { it.copy(showTray = value) }
+                    } else {
+                        vm.showToast(s[Str.TrayUnavailable])
+                    }
+                },
             )
+            if (!AppControl.traySupported) {
+                Text(
+                    text = s[Str.TrayUnavailable],
+                    color = SaltTheme.colors.warning,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(vertical = 2.dp),
+                )
+            }
             PickerRow(
                 label = s[Str.SleepTimer],
                 options = listOf(0, 15, 30, 45, 60, 90).map { minutes ->

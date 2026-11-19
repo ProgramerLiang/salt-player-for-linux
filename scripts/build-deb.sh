@@ -43,7 +43,13 @@ Categories=AudioVideo;Audio;Player;
 MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;
 StartupNotify=true
 DESKTOP
-cp "$(dirname "$0")/../icons/icon.png" "$INSTALL/usr/share/icons/hicolor/512x512/apps/salt-player.png"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+for size in 16 24 32 48 64 128 256 512; do
+  install -Dm644 "$ROOT_DIR/icons/hicolor/${size}x${size}/apps/salt-player.png" \
+    "$INSTALL/usr/share/icons/hicolor/${size}x${size}/apps/salt-player.png"
+done
+install -Dm644 "$ROOT_DIR/icons/salt-player.svg" \
+  "$INSTALL/usr/share/icons/hicolor/scalable/apps/salt-player.svg"
 
 INSTALLED_SIZE=$(du -sk "$INSTALL" | cut -f1)
 cat > "$CONTROL" <<CONTROL
@@ -61,6 +67,16 @@ Depends: libc6, libstdc++6
 Recommends: gstreamer1.0-plugins-base, gstreamer1.0-plugins-good
 CONTROL
 cp "$CONTROL" "$ROOT/DEBIAN/control"
+cat > "$ROOT/DEBIAN/postinst" <<'POSTINST'
+#!/bin/sh
+set -e
+gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor >/dev/null 2>&1 || true
+update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true
+exit 0
+POSTINST
+chmod 755 "$ROOT/DEBIAN/postinst"
+printf '#!/bin/sh\nset -e\ngtk-update-icon-cache -q -t -f /usr/share/icons/hicolor >/dev/null 2>&1 || true\nexit 0\n' > "$ROOT/DEBIAN/postrm"
+chmod 755 "$ROOT/DEBIAN/postrm"
 
 # Debian archives: 2-byte line endings in control tar, root ownership, deterministic order.
 tar --owner=0 --group=0 --numeric-owner --mtime='UTC 1970-01-01' \

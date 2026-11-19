@@ -29,6 +29,7 @@ import com.saltplayer.data.prefs.WindowMode
 import com.saltplayer.data.prefs.SettingsStore
 import com.saltplayer.data.scan.LibraryScanner
 import com.saltplayer.data.session.SessionStore
+import com.saltplayer.platform.AppControl
 import com.saltplayer.platform.SingleInstance
 import com.saltplayer.platform.mpris.MprisServer
 import com.saltplayer.playback.EngineRegistry
@@ -97,17 +98,33 @@ fun main() {
         }
     }
 
+    AppControl.traySupported = runCatching { java.awt.SystemTray.isSupported() }.getOrDefault(false)
+    Log.info("App", "system tray supported=${AppControl.traySupported} (AWT SystemTray)")
+    if (!AppControl.traySupported) {
+        AppControl.trayUnavailableReason =
+            "This desktop exposes no AWT/StatusNotifier tray host (typical on Wayland)."
+    }
+    AppControl.restart = {
+        val command = ProcessHandle.current().info().command().orElse(null)
+        shutdown(scope, player, mpris, database, singleInstance)
+        if (command != null) {
+            // Launch the replacement first so the window reappears immediately, then exit this
+            // process (exitApplication is only available inside the application scope).
+            runCatching { ProcessBuilder(command).inheritIO().start() }
+                .onSuccess { kotlin.system.exitProcess(0) }
+                .onFailure { com.saltplayer.core.Log.warn("App", "restart failed", it) }
+        }
+    }
+
     scope.launch { viewModel.start() }
 
     application {
-        // No hard-coded window size: niri (and other tiling compositors) own the surface
-        // size. Forcing 1180x800 dp left the Compose canvas smaller than the window and
-        // produced an unpainted dark band on the right/bottom edge.
-        // Tiling compositors own the surface size. On niri a windowed surface ends up larger
-        // than the size the toolkit reports, which shows as black bands or clipped rounded
-        // corners, so the default is fullscreen and the mode is user-selectable in Settings.
+        // The window mode is read ONCE per process. Changing decoration/placement at runtime
+        // makes the toolkit recreate the native window, which crashes under XWayland; the
+        // settings screen therefore reports that a restart is required.
+        val startupMode = remember { viewModel.settings.windowMode }
         val windowState = rememberWindowState(
-            placement = when (viewModel.settings.windowMode) {
+            placement = when (startupMode) {
                 WindowMode.Fullscreen -> WindowPlacement.Fullscreen
                 WindowMode.Maximized -> WindowPlacement.Maximized
                 WindowMode.Windowed -> WindowPlacement.Floating
@@ -145,9 +162,9 @@ fun main() {
             },
             state = windowState,
             visible = windowVisible,
-            // In fullscreen the toolkit frame insets would otherwise leave an unpainted
-            // strip along the right and bottom edges.
-            undecorated = viewModel.settings.windowMode == WindowMode.Fullscreen,
+            // Decoration insets are exactly the strip that was left unpainted on the right and
+            // bottom edges, so the window is always undecorated; the app draws its own header.
+            undecorated = true,
             title = System.getProperty("salt.player.windowTitle") ?: strings[Str.AppName],
         ) {
 
@@ -162,7 +179,7 @@ fun main() {
             }
         }
 
-        if (viewModel.settings.showTray) {
+        if (viewModel.settings.showTray && AppControl.traySupported) {
             Tray(
                 icon = rememberVectorPainter(Icons.Rounded.MusicNote),
                 state = trayState,
