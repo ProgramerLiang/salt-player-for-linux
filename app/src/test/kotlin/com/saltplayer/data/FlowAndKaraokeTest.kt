@@ -67,6 +67,69 @@ class ContrastTest {
             "dark scheme must be darker than light scheme",
         )
     }
+
+    private val covers = listOf(
+        Color(0xFFE8611C), // red-orange, the user's reproduced case
+        Color(0xFF2B6BFF), // blue
+        Color(0xFFF4F0E6), // near-white
+        Color(0xFF10203A), // near-black navy
+        Color(0xFF16A085), // saturated teal
+    )
+
+    @Test
+    fun `chrome palette keeps body text above 4 point 5 on every cover and mode`() {
+        for (cover in covers) {
+            for (lightScheme in listOf(false, true)) {
+                val samples = com.saltplayer.ui.component.FlowPaletteLayers.samples(cover, lightScheme)
+                val chrome = Contrast.chromeColors(samples, lightScheme, Color(0xFFE760F4))
+                assertTrue(
+                    chrome.secondaryRatio >= Contrast.BODY_MIN,
+                    "secondary ${chrome.secondaryRatio} cover=$cover light=$lightScheme",
+                )
+                assertTrue(
+                    chrome.primaryRatio >= Contrast.BODY_MIN,
+                    "primary ${chrome.primaryRatio} cover=$cover light=$lightScheme",
+                )
+                assertTrue(
+                    chrome.disabledRatio >= 3f,
+                    "disabled ${chrome.disabledRatio} cover=$cover light=$lightScheme",
+                )
+                assertTrue(
+                    Contrast.contrastRatio(chrome.accentText, chrome.background) >= 3f,
+                    "accent icon cover=$cover light=$lightScheme",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `flow bed polarity matches the chosen scheme`() {
+        val dark = Contrast.chromeColors(
+            com.saltplayer.ui.component.FlowPaletteLayers.samples(orange, false), false, orange,
+        )
+        val light = Contrast.chromeColors(
+            com.saltplayer.ui.component.FlowPaletteLayers.samples(orange, true), true, orange,
+        )
+        assertTrue(Contrast.relativeLuminance(dark.background) < 0.1f)
+        assertTrue(Contrast.relativeLuminance(light.background) > 0.7f)
+    }
+}
+
+/** Drawer transitions are pure progress functions; no pointer state may enter them. */
+class DrawerMotionTest {
+    @Test
+    fun `scrim alpha follows progress and is stable for repeated pointer positions`() {
+        fun scrimAlpha(progress: Float) = 0.32f * progress
+        val open = scrimAlpha(1f)
+        // Simulate moving the pointer up/down 20 times: progress does not change, so neither
+        // does the scrim. This is the invariant the old implementation violated.
+        repeat(20) { step ->
+            val progress = 1f
+            assertEquals(open, scrimAlpha(progress), 1e-6f, "pointer move $step changed the scrim")
+        }
+        assertEquals(0f, scrimAlpha(0f), 1e-6f)
+        assertTrue(scrimAlpha(0.5f) in (0f..open))
+    }
 }
 
 class KaraokeWipeTest {

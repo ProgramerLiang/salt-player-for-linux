@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.github.corripo"
-version = "0.2.1"
+version = "0.2.2"
 
 val saltUiVersion = "3.0.0"
 val coroutinesVersion = "1.11.0"
@@ -78,7 +78,7 @@ compose.desktop {
             )
             // tar.gz is not part of Compose TargetFormat; see the packageTarGz task below.
             packageName = "salt-shaker"
-            packageVersion = "0.2.1"
+            packageVersion = "0.2.2"
             description = "Salt Shaker - community Linux port of Salt Player (椒盐音乐)"
             vendor = "Corripo"
             copyright = "© 2021-2026 Moriafly · Linux port © 2026 Corripo · MIT"

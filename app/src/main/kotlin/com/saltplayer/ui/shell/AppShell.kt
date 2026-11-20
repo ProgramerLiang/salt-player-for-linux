@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // Copyright (C) 2026 Corripo
 package com.saltplayer.ui.shell
-
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.clickable
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -80,7 +82,6 @@ import com.saltplayer.ui.screens.LibraryScreen
 import com.saltplayer.ui.screens.NowPlayingScreen
 import com.saltplayer.ui.screens.SearchScreen
 import com.saltplayer.ui.screens.SettingsScreen
-
 private data class NavItem(val view: LibraryView, val icon: ImageVector, val label: Str)
 
 private val NAV_ITEMS = listOf(
@@ -96,7 +97,7 @@ private val NAV_ITEMS = listOf(
 const val TABLET_MIN_WIDTH_DP = 840
 
 /**
- * The tablet shell: a persistent navigation rail on the left, a title/搜索 bar on top, the
+ * The tablet shell: a persistent navigation rail on the left, a title/search bar on top, the
  * screen content in the middle and the mini player pinned to the bottom. Below
  * [TABLET_MIN_WIDTH_DP] the rail collapses into a drawer so the app stays usable in a narrow
  * window.
@@ -113,7 +114,16 @@ fun AppShell(vm: AppViewModel) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(panelBed)) {
         val wide = maxWidth.value >= TABLET_MIN_WIDTH_DP
         var drawerOpen by remember { mutableStateOf(false) }
-
+        val drawerWidth = 248.dp
+        val drawerFraction by animateFloatAsState(
+            targetValue = if (drawerOpen) 1f else 0f,
+            animationSpec = tween(
+                durationMillis = 220,
+                easing = FastOutSlowInEasing,
+            ),
+            label = "nav-drawer",
+        )
+        val drawerVisible = drawerFraction > 0f || drawerOpen
         // Nav width scales between 208 and 264 dp so a narrow tile does not squeeze the
         // content area, while a wide tile does not leave an oversized empty rail.
         val navWidth = (maxWidth.value * 0.16f).coerceIn(208f, 264f).dp
@@ -159,20 +169,32 @@ fun AppShell(vm: AppViewModel) {
             }
         }
 
-        if (!wide && drawerOpen) {
+        if (!wide && drawerVisible) {
+            // Scrim alpha is driven only by drawer progress; pointer movement never reads hover
+            // state here, so moving the mouse cannot make it flicker.
+            if (drawerFraction > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(drawerFraction)
+                        .background(Color.Black.copy(alpha = 0.32f))
+                        .clickable(enabled = drawerFraction > 0.9f) { drawerOpen = false },
+                )
+            }
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f))
-                    .clickable { drawerOpen = false },
-            )
-            NavigationRail(
-                vm = vm,
-                modifier = Modifier.width(248.dp).fillMaxHeight(),
-                onNavigate = { drawerOpen = false },
-            )
+                    .width(drawerWidth)
+                    .fillMaxHeight()
+                    .offset(x = drawerWidth * (drawerFraction - 1f))
+                    .alpha(drawerFraction),
+            ) {
+                NavigationRail(
+                    vm = vm,
+                    modifier = Modifier.fillMaxSize(),
+                    onNavigate = { drawerOpen = false },
+                )
+            }
         }
-
         if (vm.nowPlayingOpen) {
             NowPlayingScreen(vm)
         }
@@ -281,37 +303,17 @@ private fun NavigationRail(vm: AppViewModel, modifier: Modifier = Modifier, onNa
 private fun NavRow(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    // Only compositor-friendly properties animate: colour/alpha, a 1.5 dp offset and a 1.06 scale.
-    val tint by androidx.compose.animation.animateColorAsState(
-        targetValue = when {
-            selected -> SaltTheme.colors.highlight
-            hovered -> SaltTheme.colors.text
-            else -> SaltTheme.colors.subText
-        },
-        animationSpec = androidx.compose.animation.core.tween(140),
-        label = "nav-tint",
-    )
-    val lift by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (hovered) 1.5.dp else 0.dp,
-        animationSpec = androidx.compose.animation.core.tween(
-            140,
-            easing = androidx.compose.animation.core.FastOutSlowInEasing,
-        ),
-        label = "nav-lift",
-    )
-    val iconScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (selected) 1.06f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(
-            180,
-            easing = androidx.compose.animation.core.FastOutSlowInEasing,
-        ),
-        label = "nav-icon",
-    )
+    // Hover only changes colour. No offset, scale or layout motion: the user explicitly
+    // rejected per-row lift/translate, and colour feedback keeps the rail calm and stable.
+    val tint = when {
+        selected -> SaltTheme.colors.highlight
+        hovered -> SaltTheme.colors.text
+        else -> SaltTheme.colors.subText
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(42.dp)
-            .offset(y = -lift)
             .clip(RoundedCornerShape(10.dp))
             .background(if (hovered && !selected) SaltTheme.colors.text.copy(alpha = 0.05f) else Color.Transparent)
             .hoverable(interaction)
@@ -324,9 +326,7 @@ private fun NavRow(icon: ImageVector, label: String, selected: Boolean, onClick:
             imageVector = icon,
             contentDescription = label,
             tint = tint,
-            modifier = Modifier
-                .size(19.dp)
-                .scale(iconScale),
+            modifier = Modifier.size(19.dp),
         )
         Text(
             text = label,

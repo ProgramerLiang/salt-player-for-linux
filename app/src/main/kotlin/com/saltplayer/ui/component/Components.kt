@@ -145,11 +145,11 @@ fun SaltSlider(
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    activeColor: Color = SaltTheme.colors.highlight,
+    inactiveColor: Color = SaltTheme.colors.subText.copy(alpha = 0.25f),
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
     var widthPx by remember { mutableStateOf(1f) }
-    val highlight = SaltTheme.colors.highlight
-    val trackColor = SaltTheme.colors.subText.copy(alpha = 0.25f)
     var dragging by remember { mutableStateOf(false) }
 
     fun update(x: Float) {
@@ -183,7 +183,7 @@ fun SaltSlider(
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(28.dp)) {
             widthPx = size.width
-            drawSlider(value.coerceIn(0f, 1f), highlight, trackColor, dragging)
+            drawSlider(value.coerceIn(0f, 1f), activeColor, inactiveColor, dragging)
         }
     }
 }

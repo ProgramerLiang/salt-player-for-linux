@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.saltplayer.data.media.CoverStore
+import com.saltplayer.ui.theme.Contrast
 import com.saltplayer.ui.theme.CoverPalette
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -64,33 +65,60 @@ object CoverColorCache {
     fun clear() = cache.clear()
 }
 
+/** The layering constants are shared with [Contrast.chromeColors] so the guarantee cannot drift. */
+object FlowPaletteLayers {
+    // These are sRGB channel values of the opaque neutral bed, not relative luminances.
+    // 0.12 (~#1F1F1F) and 0.88 (~#E0E0E0) leave generous contrast after the translucent
+    // cover-colour overlays are composited on top.
+    const val DARK_BED_LUMINANCE = 0.12f
+    const val LIGHT_BED_LUMINANCE = 0.88f
+    const val DARK_OVERLAY_ALPHA = 0.10f
+    const val LIGHT_OVERLAY_ALPHA = 0.055f
+    const val DARK_WASH_ALPHA = 0.12f
+    const val LIGHT_WASH_ALPHA = 0.08f
+
+    /** Exact colours the canvas can paint; used to clamp foreground contrast to the real worst case. */
+    fun samples(base: Color, lightScheme: Boolean): List<Color> = buildList {
+        val bedChannel = if (lightScheme) LIGHT_BED_LUMINANCE else DARK_BED_LUMINANCE
+        add(Color(bedChannel, bedChannel, bedChannel))
+        val overlayAlpha = if (lightScheme) LIGHT_OVERLAY_ALPHA else DARK_OVERLAY_ALPHA
+        val washAlpha = if (lightScheme) LIGHT_WASH_ALPHA else DARK_WASH_ALPHA
+        add(CoverPalette.shiftHue(base, 20f).copy(alpha = overlayAlpha))
+        add(CoverPalette.shiftHue(base, -28f).copy(alpha = overlayAlpha))
+        add(base.copy(alpha = washAlpha))
+        add(base.copy(alpha = washAlpha * 0.5f))
+    }
+}
+
 /**
  * Slowly flowing gradient built from the current track's cover colour.
  *
  * Two radial gradients drift on independent 26 s and 18 s cycles, and their hues breathe by a few
- * degrees. On a track change the base colour cross-fades over 600 ms instead of cutting, and the
- * whole thing is drawn on the canvas each frame: no bitmap copies, no blur passes.
+ * degrees. On a track change the base colour cross-fades over 600 ms instead of cutting. The
+ * neutral bed and overlay alphas are fixed per scheme, so the brightest point a dark bed can
+ * reach (and the darkest point a light bed can reach) is bounded and the foreground palette can
+ * be contrast-checked against it.
  */
 @Composable
 fun FlowBackground(
     baseColor: Color,
+    lightScheme: Boolean = false,
     modifier: Modifier = Modifier,
     animated: Boolean = true,
 ) {
-    // Track changes cross-fade the palette instead of cutting.
     val current by animateColorAsState(
         targetValue = baseColor,
         animationSpec = tween(600),
         label = "palette",
     )
     if (!animated) {
-        // Static gradient: no infinite transition, so the frame clock stays idle.
         Canvas(modifier = modifier.fillMaxSize()) {
-            drawBackdrop(current)
+            drawFlowBackdrop(current, lightScheme)
             val radius = size.maxDimension * 0.78f
+            val alpha = if (lightScheme) FlowPaletteLayers.LIGHT_OVERLAY_ALPHA else FlowPaletteLayers.DARK_OVERLAY_ALPHA
             drawCircle(
                 brush = Brush.radialGradient(
-                    listOf(CoverPalette.shiftHue(current, 14f).copy(alpha = 0.8f), Color.Transparent),
+                    listOf(CoverPalette.shiftHue(current, 14f).copy(alpha = alpha), Color.Transparent),
                     center = Offset(size.width * 0.34f, size.height * 0.30f),
                     radius = radius,
                 ),
@@ -99,7 +127,7 @@ fun FlowBackground(
             )
             drawCircle(
                 brush = Brush.radialGradient(
-                    listOf(CoverPalette.shiftHue(current, -22f).copy(alpha = 0.7f), Color.Transparent),
+                    listOf(CoverPalette.shiftHue(current, -22f).copy(alpha = alpha), Color.Transparent),
                     center = Offset(size.width * 0.70f, size.height * 0.72f),
                     radius = radius * 0.92f,
                 ),
@@ -133,7 +161,7 @@ fun FlowBackground(
     val cool = remember(current) { CoverPalette.shiftHue(current, -28f) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        drawBackdrop(current)
+        drawFlowBackdrop(current, lightScheme)
         val radius = size.maxDimension * 0.78f
         val center1 = Offset(
             x = size.width * (0.32f + 0.10f * cos(drift)),
@@ -143,9 +171,10 @@ fun FlowBackground(
             x = size.width * (0.70f + 0.09f * cos(drift * 0.7f + 1.4f)),
             y = size.height * (0.72f + 0.07f * sin(drift * 0.6f)),
         )
+        val alpha = if (lightScheme) FlowPaletteLayers.LIGHT_OVERLAY_ALPHA else FlowPaletteLayers.DARK_OVERLAY_ALPHA
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(warm.copy(alpha = 0.85f), Color.Transparent),
+                colors = listOf(warm.copy(alpha = alpha), Color.Transparent),
                 center = center1,
                 radius = radius,
             ),
@@ -154,7 +183,7 @@ fun FlowBackground(
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(cool.copy(alpha = 0.75f), Color.Transparent),
+                colors = listOf(cool.copy(alpha = alpha), Color.Transparent),
                 center = center2,
                 radius = radius * 0.92f,
             ),
@@ -164,16 +193,22 @@ fun FlowBackground(
     }
 }
 
-private fun DrawScope.drawBackdrop(base: Color) {
-    // Fully opaque bed: a translucent one let the page underneath show through the lyrics.
-    drawRect(color = Color(0xFF101014), size = Size(size.width, size.height))
+private fun DrawScope.drawFlowBackdrop(base: Color, lightScheme: Boolean) {
+    // Opaque neutral bed. Its luminance matches the text polarity instead of being hard-coded
+    // dark, so a light-scheme page is genuinely light rather than a black bed with a pale wash.
+    val channel = if (lightScheme) {
+        FlowPaletteLayers.LIGHT_BED_LUMINANCE
+    } else {
+        FlowPaletteLayers.DARK_BED_LUMINANCE
+    }
+    drawRect(
+        color = Color(channel, channel, channel),
+        size = Size(size.width, size.height),
+    )
+    val alpha = if (lightScheme) FlowPaletteLayers.LIGHT_WASH_ALPHA else FlowPaletteLayers.DARK_WASH_ALPHA
     drawRect(
         brush = Brush.verticalGradient(
-            listOf(
-                base.copy(alpha = 0.62f),
-                base.copy(alpha = 0.30f),
-                Color.Transparent,
-            )
+            listOf(base.copy(alpha = alpha), base.copy(alpha = alpha * 0.5f), Color.Transparent),
         ),
         size = Size(size.width, size.height),
     )
